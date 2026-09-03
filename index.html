@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Ontology on Snowflake — 5-Layer Stack Architecture</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-09-02",
+    "intent": "Visual guide to Retail Supply Chain Ontology Stack for partner training",
+    "dataSources": [
+      { "type": "query", "sql": "SELECT NODE_TYPE, COUNT(*) FROM DB_RETAIL_SUPPLY_CHAIN.SUPPLY_CHAIN.KG_NODE GROUP BY NODE_TYPE" },
+      { "type": "query", "sql": "SELECT EDGE_TYPE, COUNT(*) FROM DB_RETAIL_SUPPLY_CHAIN.SUPPLY_CHAIN.KG_EDGE GROUP BY EDGE_TYPE" },
+      { "type": "query", "sql": "SELECT * FROM DB_RETAIL_SUPPLY_CHAIN.SUPPLY_CHAIN.ONT_CLASS" },
+      { "type": "query", "sql": "SELECT * FROM DB_RETAIL_SUPPLY_CHAIN.SUPPLY_CHAIN.ONT_RELATION_DEF" }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: light-dark(#ffffff, #0f172a); --bg2: light-dark(#f8fafc, #1e293b); --bg3: light-dark(#f1f5f9, #1e293b); --fg: light-dark(#1e293b, #e2e8f0); --fg2: light-dark(#334155, #cbd5e1); --fg3: light-dark(#64748b, #94a3b8); --border: light-dark(#e2e8f0, #334155); --accent: light-dark(#1e40af, #93c5fd); --heading: light-dark(#0f172a, #f8fafc); }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; max-width: 1000px; width: 100%; margin: 0 auto; padding: clamp(16px, 4vw, 32px); color: var(--fg); background: var(--bg); line-height: 1.6; }
+    h1 { font-size: clamp(1.5rem, 4vw, 2rem); color: var(--heading); margin-bottom: 0.3em; }
+    h2 { font-size: clamp(1.2rem, 3vw, 1.5rem); color: var(--accent); margin-top: 2.5em; border-bottom: 2px solid light-dark(#dbeafe, #1e3a5f); padding-bottom: 0.3em; }
+    h3 { font-size: 1.1rem; color: light-dark(#1e3a8a, #bfdbfe); margin-top: 1.5em; margin-bottom: 0.5em; }
+    p, li { color: var(--fg2); margin-top: 0.4em; }
+    a { color: light-dark(#2563eb, #60a5fa); }
+    img, svg { max-width: 100%; height: auto; }
+    .subtitle { color: var(--fg3); font-size: 1rem; margin-top: 0; }
+
+    /* Layer cards */
+    .layer-card { border: 1px solid var(--border); border-radius: 12px; padding: clamp(16px, 3vw, 24px); margin: 1.5em 0; background: var(--bg2); }
+    .layer-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .layer-badge { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; font-weight: 700; font-size: 1.1rem; color: #fff; flex-shrink: 0; }
+    .layer-badge.l0 { background: #475569; } .layer-badge.l1 { background: #6366f1; } .layer-badge.l2 { background: #8b5cf6; } .layer-badge.l3 { background: #a855f7; } .layer-badge.l4 { background: #d946ef; } .layer-badge.l5 { background: #ec4899; }
+    .layer-title { font-size: 1.25rem; font-weight: 700; color: var(--heading); }
+    .layer-desc { color: var(--fg3); font-size: 0.9rem; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 16px 0; }
+    .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 0.72rem; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; margin: 12px 0; border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.84rem; }
+    th, td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; }
+    th { background: var(--bg3); font-weight: 600; color: var(--fg); white-space: nowrap; }
+    td { color: var(--fg2); }
+    tr:nth-child(even) td { background: light-dark(#f8fafc, #0f172a33); }
+
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+    .tag-abstract { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #93c5fd); }
+    .tag-concrete { background: light-dark(#d1fae5, #064e3b); color: light-dark(#065f46, #6ee7b7); }
+    .tag-true { background: light-dark(#fef3c7, #78350f); color: light-dark(#92400e, #fde68a); }
+    .tag-false { color: var(--fg3); font-size: 0.8rem; }
+
+    .code-block { background: light-dark(#1e293b, #020617); color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; overflow-x: auto; white-space: pre; line-height: 1.5; }
+    .hl-type { color: #c084fc; } .hl-name { color: #67e8f9; } .hl-str { color: #86efac; } .hl-num { color: #fbbf24; } .hl-kw { color: #f472b6; }
+    .section-note { background: light-dark(#eff6ff, #172554); border-left: 4px solid light-dark(#3b82f6, #60a5fa); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 0.9rem; margin: 12px 0; }
+
+    /* ===== Architecture Diagram (pure CSS) ===== */
+    .arch-stack { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 24px 0; }
+    .arch-box { width: min(100%, 640px); border-radius: 10px; padding: 14px 20px; color: #fff; text-align: center; position: relative; }
+    .arch-box .ab-title { font-weight: 700; font-size: 1rem; }
+    .arch-box .ab-sub { font-size: 0.82rem; opacity: 0.9; }
+    .arch-arrow { color: var(--fg3); font-size: 1.3rem; line-height: 1; padding: 2px 0; }
+    .arch-box.l5bg { background: #ec4899; } .arch-box.l4bg { background: #d946ef; } .arch-box.l3bg { background: #a855f7; } .arch-box.l2bg { background: #8b5cf6; } .arch-box.l1bg { background: #6366f1; } .arch-box.l0bg { background: #475569; }
+
+    /* ===== Class Hierarchy Tree (pure CSS) ===== */
+    .tree { margin: 16px 0; padding-left: 0; }
+    .tree, .tree ul { list-style: none; }
+    .tree ul { padding-left: 24px; border-left: 2px solid light-dark(#cbd5e1, #334155); margin-left: 12px; }
+    .tree li { position: relative; padding: 4px 0 4px 20px; }
+    .tree li::before { content: ''; position: absolute; left: -2px; top: 14px; width: 18px; height: 0; border-top: 2px solid light-dark(#cbd5e1, #334155); }
+    .tree > li::before { display: none; }
+    .tree > li { padding-left: 0; }
+    .tree-node { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 600; }
+    .tree-node.abstract { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #93c5fd); border: 2px dashed light-dark(#93c5fd, #3b82f6); }
+    .tree-node.concrete { background: light-dark(#d1fae5, #064e3b); color: light-dark(#065f46, #6ee7b7); border: 2px solid light-dark(#6ee7b7, #059669); }
+    .tree-node.standalone { background: light-dark(#fef3c7, #451a03); color: light-dark(#92400e, #fde68a); border: 2px solid light-dark(#fbbf24, #b45309); }
+    .tree-cnt { font-weight: 400; font-size: 0.78rem; opacity: 0.8; }
+
+    /* ===== Relation Graph (pure CSS) ===== */
+    .rel-graph { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0; }
+    .rel-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; text-align: center; min-width: 200px; flex: 1 1 200px; max-width: 300px; }
+    .rel-card .rc-name { font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .rel-card .rc-path { color: var(--fg2); }
+    .rel-card .rc-path .rc-arrow { color: light-dark(#ef4444, #f87171); font-weight: 700; }
+    .rel-card .rc-tags { margin-top: 6px; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+
+    /* ===== Agent Routing (pure CSS) ===== */
+    .routing-flow { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 20px 0; }
+    .rf-box { border-radius: 10px; padding: 14px 18px; text-align: center; color: #fff; min-width: 140px; }
+    .rf-arrow { font-size: 1.8rem; color: var(--fg3); padding: 0 4px; }
+    .rf-branch { display: flex; flex-direction: column; gap: 8px; }
+
+    /* Why-box */
+    .why-box { background: light-dark(#fefce8, #422006); border: 1px solid light-dark(#fde68a, #854d0e); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+    .why-box .why-title { font-weight: 700; font-size: 0.92rem; color: light-dark(#92400e, #fde68a); margin-bottom: 6px; }
+    .why-box p { margin: 4px 0; font-size: 0.88rem; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+    .compare-box { border-radius: 6px; padding: 10px 12px; font-size: 0.82rem; }
+    .compare-box.before { background: light-dark(#fef2f2, #450a0a); border: 1px solid light-dark(#fecaca, #7f1d1d); }
+    .compare-box.after { background: light-dark(#f0fdf4, #052e16); border: 1px solid light-dark(#bbf7d0, #166534); }
+    .compare-box .cb-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .compare-box.before .cb-label { color: light-dark(#dc2626, #fca5a5); }
+    .compare-box.after .cb-label { color: light-dark(#16a34a, #86efac); }
+    @media (max-width: 500px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    /* Bar chart (pure CSS) */
+    .bar-chart { margin: 12px 0; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 0.8rem; }
+    .bar-label { width: 130px; text-align: right; color: var(--fg2); flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 22px; background: light-dark(#e2e8f0, #1e293b); border-radius: 4px; overflow: hidden; position: relative; }
+    .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; color: #fff; font-size: 0.72rem; font-weight: 600; min-width: 30px; }
+    .bar-val { width: 70px; text-align: right; color: var(--fg3); font-size: 0.78rem; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<h1>Ontology on Snowflake</h1>
+<p class="subtitle">Retail Supply Chain 데모 &mdash; 5-Layer Stack 아키텍처 가이드</p>
+<p>DB_RETAIL_SUPPLY_CHAIN.SUPPLY_CHAIN &mdash; 26,188개 노드, 35,554개 엣지, 15개 클래스, 9개 관계</p>
+
+<!-- ===== ARCHITECTURE OVERVIEW ===== -->
+<h2>아키텍처 개요</h2>
+<div class="arch-stack">
+  <div class="arch-box l5bg"><div class="ab-title">Layer 5: Cortex Agent</div><div class="ab-sub">RETAIL_SUPPLY_CHAIN_AGENT &mdash; 자연어 질문을 적절한 Semantic Model로 라우팅</div></div>
+  <div class="arch-arrow">&darr;</div>
+  <div class="arch-box l4bg"><div class="ab-title">Layer 4: Semantic Views</div><div class="ab-sub">SV_SUPPLY_CHAIN_BASE &bull; SV_SUPPLY_CHAIN_KG</div></div>
+  <div class="arch-arrow">&darr;</div>
+  <div class="arch-box l3bg"><div class="ab-title">Layer 3: Abstract Views</div><div class="ab-sub">VW_ONT_* (14개 뷰) &bull; 계층 구조 + 유틸리티 뷰</div></div>
+  <div class="arch-arrow">&darr;</div>
+  <div class="arch-box l2bg"><div class="ab-title">Layer 2: Ontology Metadata</div><div class="ab-sub">ONT_CLASS, ONT_RELATION_DEF, ONT_RULE 등 9개 이상의 메타데이터 테이블</div></div>
+  <div class="arch-arrow">&darr;</div>
+  <div class="arch-box l1bg"><div class="ab-title">Layer 1: Physical Storage</div><div class="ab-sub">KG_NODE (26,188) + KG_EDGE (35,554) &bull; V_* Concrete Views (19개)</div></div>
+  <div class="arch-arrow">&darr;</div>
+  <div class="arch-box l0bg"><div class="ab-title">Source Tables</div><div class="ab-sub">10개 원본 테이블 (총 26,188행) &mdash; SUPPLIERS, COMPONENTS, PRODUCTS, BOM, ...</div></div>
+</div>
+
+<!-- ===== ONTOLOGY GRAPH ===== -->
+<h2>Ontology Graph</h2>
+<div class="layer-card">
+  <div class="section-note">클래스 계층 구조(subClassOf)와 엔티티 간 관계를 인터랙티브 그래프로 시각화합니다. 노드를 드래그하여 이동할 수 있으며, 마우스를 올리면 상세 정보가 표시됩니다. <b>파란 점선</b> = subClassOf (계층), <b>컬러 실선</b> = 비즈니스 관계.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:0.78rem;">
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#6366f1;display:inline-block;border:2px dashed #93c5fd;"></span> Abstract 클래스</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#22c55e;display:inline-block;"></span> Concrete 클래스</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> 독립 클래스</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:30px;height:0;border-top:2px dashed #93c5fd;display:inline-block;"></span> subClassOf</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:30px;height:0;border-top:2px solid #ef4444;display:inline-block;"></span> 비즈니스 관계</span>
+  </div>
+
+  <div id="ontology-graph" style="width:100%;height:560px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:light-dark(#f8fafc,#0f172a);position:relative;">
+    <div id="graph-controls" style="position:absolute;top:10px;right:10px;z-index:10;display:flex;flex-direction:column;gap:4px;">
+      <button id="zoom-in" style="width:34px;height:34px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+      <button id="zoom-out" style="width:34px;height:34px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&minus;</button>
+      <button id="zoom-reset" style="width:34px;height:34px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">1:1</button>
+    </div>
+    <div id="zoom-level" style="position:absolute;bottom:8px;left:12px;font-size:0.72rem;color:var(--fg3);z-index:10;">100%</div>
+  </div>
+  <div id="graph-tooltip" style="position:fixed;display:none;background:light-dark(#1e293b,#0f172a);color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:0.8rem;pointer-events:none;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:260px;line-height:1.4;"></div>
+</div>
+
+<!-- ===== LAYER 1 ===== -->
+<div class="layer-card">
+  <div class="layer-header">
+    <div class="layer-badge l1">L1</div>
+    <div><div class="layer-title">Physical Storage (KG 테이블 + Concrete Views)</div><div class="layer-desc">10개 원본 테이블의 데이터를 KG_NODE / KG_EDGE 그래프 구조로 통합 저장</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">26,188</div><div class="stat-label">KG_NODE 행 수</div></div>
+    <div class="stat-card"><div class="stat-value">35,554</div><div class="stat-label">KG_EDGE 행 수</div></div>
+    <div class="stat-card"><div class="stat-value">10</div><div class="stat-label">Node Types</div></div>
+    <div class="stat-card"><div class="stat-value">9</div><div class="stat-label">Edge Types</div></div>
+    <div class="stat-card"><div class="stat-value">19</div><div class="stat-label">Concrete Views</div></div>
+  </div>
+
+  <div class="why-box">
+    <div class="why-title">Layer 1은 왜 필요한가?</div>
+    <p>10개의 서로 다른 테이블(SUPPLIERS, COMPONENTS, PRODUCTS 등)에 분산된 데이터를 <b>하나의 통합 그래프 구조</b>(KG_NODE + KG_EDGE)로 변환합니다. 이렇게 하면 "공급업체에서 원자재까지 몇 단계를 거치는가?"처럼 <b>테이블을 넘나드는 관계 탐색</b>을 단일 테이블의 재귀 쿼리로 처리할 수 있습니다.</p>
+    <div class="compare-grid">
+      <div class="compare-box before">
+        <div class="cb-label">Before &mdash; 원본 테이블</div>
+        10개 테이블에 각각 다른 PK/FK 구조. 공급업체&rarr;부품&rarr;제품 관계를 추적하려면 SUPPLY_CONTRACTS, BOM, PRODUCTS를 수동 JOIN해야 함. 새로운 관계 추가 시 스키마 변경 필요.
+      </div>
+      <div class="compare-box after">
+        <div class="cb-label">After &mdash; KG_NODE + KG_EDGE</div>
+        모든 엔티티는 KG_NODE, 모든 관계는 KG_EDGE에 통합. 새 관계는 EDGE_TYPE만 추가하면 되고, 재귀 탐색(BOM 트리, 공급망 추적)이 단일 테이블 CTE로 가능.
+      </div>
+    </div>
+  </div>
+
+  <h3>KG_NODE 테이블 구조</h3>
+  <div class="section-note">모든 원본 테이블의 데이터가 하나의 <b>KG_NODE</b> 테이블에 로드됩니다. 각 행은 하나의 엔티티를 나타내며, 타입 접두사가 붙은 ID, 표시명, 그리고 원본 컬럼 전체를 VARIANT 타입의 <b>PROPS</b> 컬럼에 JSON으로 저장합니다.</div>
+  <div class="code-block"><span class="hl-kw">CREATE TABLE</span> <span class="hl-name">KG_NODE</span> (
+    <span class="hl-name">NODE_ID</span>     <span class="hl-type">STRING</span>  <span class="hl-str">-- 'SUP_1', 'CMP_201', 'PRD_1001'</span>
+    <span class="hl-name">NODE_TYPE</span>   <span class="hl-type">STRING</span>  <span class="hl-str">-- 'Supplier', 'Component', 'Product', ...</span>
+    <span class="hl-name">NAME</span>        <span class="hl-type">STRING</span>  <span class="hl-str">-- 'Samsung SDI', 'Battery Cell 4680'</span>
+    <span class="hl-name">PROPS</span>       <span class="hl-type">VARIANT</span> <span class="hl-str">-- All original columns as JSON</span>
+) <span class="hl-kw">CLUSTER BY</span> (NODE_TYPE);</div>
+
+  <h3>KG_NODE 타입별 분포</h3>
+  <div class="bar-chart">
+    <div class="bar-row"><div class="bar-label">Order</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#ef4444">15,535</div></div><div class="bar-val">59.3%</div></div>
+    <div class="bar-row"><div class="bar-label">Shipment</div><div class="bar-track"><div class="bar-fill" style="width:60%;background:#f97316">9,320</div></div><div class="bar-val">35.6%</div></div>
+    <div class="bar-row"><div class="bar-label">Inventory</div><div class="bar-track"><div class="bar-fill" style="width:4.8%;background:#eab308">745</div></div><div class="bar-val">2.8%</div></div>
+    <div class="bar-row"><div class="bar-label">Bom</div><div class="bar-track"><div class="bar-fill" style="width:1.6%;background:#22c55e">249</div></div><div class="bar-val">1.0%</div></div>
+    <div class="bar-row"><div class="bar-label">SupplyContract</div><div class="bar-track"><div class="bar-fill" style="width:0.8%;background:#14b8a6">118</div></div><div class="bar-val">0.5%</div></div>
+    <div class="bar-row"><div class="bar-label">Component</div><div class="bar-track"><div class="bar-fill" style="width:0.5%;background:#3b82f6">80</div></div><div class="bar-val">0.3%</div></div>
+    <div class="bar-row"><div class="bar-label">Supplier</div><div class="bar-track"><div class="bar-fill" style="width:0.3%;background:#6366f1">50</div></div><div class="bar-val">0.2%</div></div>
+    <div class="bar-row"><div class="bar-label">Product</div><div class="bar-track"><div class="bar-fill" style="width:0.26%;background:#8b5cf6">40</div></div><div class="bar-val">0.2%</div></div>
+    <div class="bar-row"><div class="bar-label">Substitution</div><div class="bar-track"><div class="bar-fill" style="width:0.2%;background:#d946ef">31</div></div><div class="bar-val">0.1%</div></div>
+    <div class="bar-row"><div class="bar-label">Warehouse</div><div class="bar-track"><div class="bar-fill" style="width:0.13%;background:#ec4899">20</div></div><div class="bar-val">0.1%</div></div>
+  </div>
+
+  <h3>KG_EDGE 타입별 분포</h3>
+  <div class="bar-chart">
+    <div class="bar-row"><div class="bar-label">orders_product</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#ef4444">15,535</div></div><div class="bar-val">43.7%</div></div>
+    <div class="bar-row"><div class="bar-label">fulfills</div><div class="bar-track"><div class="bar-fill" style="width:60%;background:#f97316">9,320</div></div><div class="bar-val">26.2%</div></div>
+    <div class="bar-row"><div class="bar-label">ships_from</div><div class="bar-track"><div class="bar-fill" style="width:60%;background:#eab308">9,320</div></div><div class="bar-val">26.2%</div></div>
+    <div class="bar-row"><div class="bar-label">stored_in</div><div class="bar-track"><div class="bar-fill" style="width:4.8%;background:#22c55e">745</div></div><div class="bar-val">2.1%</div></div>
+    <div class="bar-row"><div class="bar-label">assembles_from</div><div class="bar-track"><div class="bar-fill" style="width:1.6%;background:#14b8a6">249</div></div><div class="bar-val">0.7%</div></div>
+    <div class="bar-row"><div class="bar-label">supplies</div><div class="bar-track"><div class="bar-fill" style="width:0.8%;background:#3b82f6">118</div></div><div class="bar-val">0.3%</div></div>
+    <div class="bar-row"><div class="bar-label">contracted_with</div><div class="bar-track"><div class="bar-fill" style="width:0.8%;background:#6366f1">118</div></div><div class="bar-val">0.3%</div></div>
+    <div class="bar-row"><div class="bar-label">contract_for</div><div class="bar-track"><div class="bar-fill" style="width:0.8%;background:#8b5cf6">118</div></div><div class="bar-val">0.3%</div></div>
+    <div class="bar-row"><div class="bar-label">substitutes_for</div><div class="bar-track"><div class="bar-fill" style="width:0.2%;background:#d946ef">31</div></div><div class="bar-val">0.1%</div></div>
+  </div>
+
+  <h3>KG_NODE 샘플 데이터</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>NODE_ID</th><th>NODE_TYPE</th><th>NAME</th><th>PROPS (미리보기)</th></tr></thead>
+    <tbody>
+      <tr><td>SUP_1</td><td>Supplier</td><td>Samsung SDI</td><td>{"COUNTRY":"South Korea","IS_ECO_CERTIFIED":true,...}</td></tr>
+      <tr><td>CMP_201</td><td>Component</td><td>Battery Cell 4680</td><td>{"CATEGORY":"Subassembly","UNIT_COST":150,...}</td></tr>
+      <tr><td>PRD_1001</td><td>Product</td><td>EcoBook Pro 15</td><td>{"CATEGORY":"Electronics","PRICE":1299,...}</td></tr>
+      <tr><td>WH_1</td><td>Warehouse</td><td>Seoul DC</td><td>{"REGION":"Asia","CAPACITY_UNITS":50000,...}</td></tr>
+      <tr><td>ORD_5001</td><td>Order</td><td>Hyundai Motor</td><td>{"PRODUCT_ID":1007,"QUANTITY":50,...}</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>KG_EDGE 테이블 구조</h3>
+  <div class="code-block"><span class="hl-kw">CREATE TABLE</span> <span class="hl-name">KG_EDGE</span> (
+    <span class="hl-name">EDGE_ID</span>    <span class="hl-type">STRING</span>  <span class="hl-str">-- UUID</span>
+    <span class="hl-name">SRC_ID</span>     <span class="hl-type">STRING</span>  <span class="hl-str">-- Source node (e.g., 'SUP_1')</span>
+    <span class="hl-name">DST_ID</span>     <span class="hl-type">STRING</span>  <span class="hl-str">-- Target node (e.g., 'CMP_201')</span>
+    <span class="hl-name">EDGE_TYPE</span>  <span class="hl-type">STRING</span>  <span class="hl-str">-- 'supplies', 'assembles_from', ...</span>
+    <span class="hl-name">WEIGHT</span>     <span class="hl-type">FLOAT</span>   <span class="hl-str">-- Default 1.0</span>
+    <span class="hl-name">PROPS</span>      <span class="hl-type">VARIANT</span> <span class="hl-str">-- Relationship attributes as JSON</span>
+) <span class="hl-kw">CLUSTER BY</span> (EDGE_TYPE, SRC_ID, DST_ID);</div>
+
+  <h3>KG_EDGE 샘플 데이터</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>SRC_ID</th><th>DST_ID</th><th>EDGE_TYPE</th><th>PROPS (미리보기)</th></tr></thead>
+    <tbody>
+      <tr><td>SUP_1</td><td>CMP_201</td><td>supplies</td><td>{"agreed_unit_price":145,"is_active":true}</td></tr>
+      <tr><td>PRD_1001</td><td>CMP_303</td><td>assembles_from</td><td>{"quantity":1,"parent_type":"PRODUCT"}</td></tr>
+      <tr><td>CMP_201</td><td>CMP_202</td><td>substitutes_for</td><td>{"compatibility_score":0.7}</td></tr>
+      <tr><td>INV_11</td><td>WH_2</td><td>stored_in</td><td>{"quantity":5000,"item_type":"COMPONENT"}</td></tr>
+      <tr><td>ORD_5001</td><td>PRD_1007</td><td>orders_product</td><td>{"quantity":50,"status":"Shipped"}</td></tr>
+      <tr><td>SHP_9001</td><td>ORD_5001</td><td>fulfills</td><td>{"carrier":"Maersk","status":"InTransit"}</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Concrete Views (V_*) &mdash; 왜 필요한가?</h3>
+  <div class="why-box">
+    <div class="why-title">KG 테이블만으로는 불편한 이유</div>
+    <p>KG_NODE/KG_EDGE는 모든 데이터를 VARIANT(JSON) 컬럼 <code>PROPS</code>에 저장합니다. 유연하지만, 매번 <code>PROPS:PRICE::FLOAT</code>처럼 JSON 경로를 파싱해야 합니다. Concrete View는 이 <b>JSON 추출을 미리 수행</b>하여 일반 컬럼처럼 사용할 수 있게 합니다.</p>
+    <div class="compare-grid">
+      <div class="compare-box before">
+        <div class="cb-label">Before &mdash; KG_NODE 직접 쿼리</div>
+        <code style="font-size:0.78rem;">SELECT PROPS:PRICE::FLOAT AS PRICE,<br/>PROPS:CATEGORY::STRING AS CATEGORY<br/>FROM KG_NODE<br/>WHERE NODE_TYPE = 'Product'</code>
+      </div>
+      <div class="compare-box after">
+        <div class="cb-label">After &mdash; V_PRODUCT 뷰 사용</div>
+        <code style="font-size:0.78rem;">SELECT PRICE, CATEGORY<br/>FROM V_PRODUCT</code><br/>
+        <span style="font-size:0.75rem;color:light-dark(#16a34a, #86efac);">JSON 파싱 불필요, 타입 안전, 자동완성 지원</span>
+      </div>
+    </div>
+  </div>
+  <div class="section-note">각 엔티티/관계 타입마다 PROPS에서 특정 컬럼을 추출하는 <b>타입별 뷰</b>가 생성됩니다. JSON 파싱 없이 익숙한 SQL로 조회할 수 있습니다.</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>뷰 이름</th><th>소스</th><th>용도</th><th>주요 컬럼</th></tr></thead>
+    <tbody>
+      <tr><td colspan="4" style="background:light-dark(#dbeafe,#1e3a5f);font-weight:700;color:light-dark(#1e40af,#93c5fd);text-align:center;">Entity Views (KG_NODE 기반) — 10개</td></tr>
+      <tr><td>V_SUPPLIER</td><td>KG_NODE</td><td>공급업체</td><td>NAME, TIER, REGION, COUNTRY, IS_ECO_CERTIFIED</td></tr>
+      <tr><td>V_COMPONENT</td><td>KG_NODE</td><td>부품</td><td>NAME, CATEGORY, UNIT_COST, LEAD_TIME_DAYS</td></tr>
+      <tr><td>V_PRODUCT</td><td>KG_NODE</td><td>제품</td><td>NAME, CATEGORY, PRICE, IS_ACTIVE</td></tr>
+      <tr><td>V_BOM</td><td>KG_NODE</td><td>BOM (조립 관계)</td><td>PARENT_ID, CHILD_COMPONENT_ID, QUANTITY</td></tr>
+      <tr><td>V_SUPPLYCONTRACT</td><td>KG_NODE</td><td>공급 계약</td><td>SUPPLIER_ID, COMPONENT_ID, AGREED_UNIT_PRICE</td></tr>
+      <tr><td>V_SUBSTITUTION</td><td>KG_NODE</td><td>대체 관계</td><td>COMPONENT_ID, SUBSTITUTE_COMPONENT_ID, COMPATIBILITY_SCORE</td></tr>
+      <tr><td>V_WAREHOUSE</td><td>KG_NODE</td><td>창고</td><td>NAME, REGION, CITY, CAPACITY_UNITS</td></tr>
+      <tr><td>V_INVENTORY</td><td>KG_NODE</td><td>재고</td><td>WAREHOUSE_ID, ITEM_ID, ITEM_TYPE, QUANTITY</td></tr>
+      <tr><td>V_ORDER</td><td>KG_NODE</td><td>주문</td><td>CUSTOMER_NAME, QUANTITY, ORDER_DATE, STATUS</td></tr>
+      <tr><td>V_SHIPMENT</td><td>KG_NODE</td><td>배송</td><td>ORDER_ID, WAREHOUSE_ID, CARRIER, STATUS</td></tr>
+      <tr><td colspan="4" style="background:light-dark(#d1fae5,#064e3b);font-weight:700;color:light-dark(#065f46,#6ee7b7);text-align:center;">Relationship Views (KG_EDGE 기반) — 9개</td></tr>
+      <tr><td>V_ASSEMBLES_FROM</td><td>KG_EDGE</td><td>BOM 조립 관계</td><td>SRC_ID, DST_ID, QUANTITY, PARENT_TYPE</td></tr>
+      <tr><td>V_SUPPLIES</td><td>KG_EDGE</td><td>공급업체 &rarr; 부품</td><td>SRC_ID, DST_ID, AGREED_UNIT_PRICE, IS_ACTIVE</td></tr>
+      <tr><td>V_SUBSTITUTES_FOR</td><td>KG_EDGE</td><td>부품 대체 관계</td><td>SRC_ID, DST_ID, COMPATIBILITY_SCORE</td></tr>
+      <tr><td>V_STORED_IN</td><td>KG_EDGE</td><td>재고 &rarr; 창고</td><td>SRC_ID, DST_ID, QUANTITY, ITEM_TYPE</td></tr>
+      <tr><td>V_ORDERS_PRODUCT</td><td>KG_EDGE</td><td>주문 &rarr; 제품</td><td>SRC_ID, DST_ID, QUANTITY, STATUS</td></tr>
+      <tr><td>V_FULFILLS</td><td>KG_EDGE</td><td>배송 &rarr; 주문</td><td>SRC_ID, DST_ID, CARRIER, STATUS</td></tr>
+      <tr><td>V_SHIPS_FROM</td><td>KG_EDGE</td><td>배송 &rarr; 창고</td><td>SRC_ID, DST_ID, SHIP_DATE, CARRIER</td></tr>
+      <tr><td>V_CONTRACTED_WITH</td><td>KG_EDGE</td><td>계약 &rarr; 공급업체</td><td>SRC_ID, DST_ID, START_DATE, END_DATE</td></tr>
+      <tr><td>V_CONTRACT_FOR</td><td>KG_EDGE</td><td>계약 &rarr; 부품</td><td>SRC_ID, DST_ID, AGREED_UNIT_PRICE, MIN_ORDER_QTY</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ===== LAYER 2 ===== -->
+<div class="layer-card">
+  <div class="layer-header">
+    <div class="layer-badge l2">L2</div>
+    <div><div class="layer-title">Ontology Metadata (ONT_* 테이블)</div><div class="layer-desc">클래스 계층 구조, 관계 정의, 추론 규칙, RBAC, 거버넌스 메타데이터</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">15</div><div class="stat-label">클래스</div></div>
+    <div class="stat-card"><div class="stat-value">9</div><div class="stat-label">관계</div></div>
+    <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">추론 규칙</div></div>
+    <div class="stat-card"><div class="stat-value">9+</div><div class="stat-label">메타데이터 테이블</div></div>
+  </div>
+
+  <div class="why-box">
+    <div class="why-title">Layer 2는 왜 필요한가?</div>
+    <p>Layer 1의 KG_NODE/KG_EDGE는 <b>데이터</b>만 저장합니다. 하지만 "Supplier는 Organization의 하위 타입이다", "assembles_from은 재귀 탐색이 가능한 transitive 관계다"와 같은 <b>데이터에 대한 지식(Knowledge)</b>은 별도로 관리해야 합니다. 이것이 메타데이터 레이어의 역할입니다.</p>
+    <p style="margin-top:8px;">메타데이터가 있으면 아래 세 가지가 가능합니다:</p>
+  </div>
+
+  <h3 style="margin-top:12px;">(1) 새 클래스/관계 추가 — INSERT 한 줄로 해결</h3>
+  <div class="section-note" style="margin-bottom:0;">
+    <p>예: 새로운 엔티티 유형 <b>LogisticsProvider</b>(물류 업체)가 추가되는 상황. 코드 변경 없이 메타데이터 INSERT만으로 온톨로지가 확장됩니다.</p>
+  </div>
+  <div class="compare-grid">
+    <div class="compare-box before">
+      <div class="cb-label">Before — 메타데이터 없이</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 1. 새 테이블 DDL 작성</span><br/>
+CREATE TABLE LOGISTICS_PROVIDERS (...);<br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 2. KG_NODE INSERT 쿼리 수정</span><br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 3. 새 V_ 뷰 CREATE VIEW 작성</span><br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 4. VW_ONT_ORGANIZATION 뷰 수정 (UNION ALL 추가)</span><br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 5. VW_ONT_ALL_ENTITIES 뷰 수정</span><br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- → 최소 5개 SQL 수작업 필요</span>
+      </code>
+    </div>
+    <div class="compare-box after">
+      <div class="cb-label">After — 메타데이터 사용</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#16a34a,#86efac);">-- 1. 클래스 등록 (INSERT 1줄)</span><br/>
+INSERT INTO ONT_CLASS VALUES<br/>
+&nbsp;&nbsp;('LogisticsProvider', 'Organization',<br/>
+&nbsp;&nbsp; FALSE, '물류 업체');<br/><br/>
+<span style="color:light-dark(#16a34a,#86efac);">-- 2. 매핑 등록 (INSERT 1줄)</span><br/>
+INSERT INTO ONT_CLASS_MAP VALUES<br/>
+&nbsp;&nbsp;(... 'LogisticsProvider', 'KG_NODE' ...);<br/><br/>
+<span style="color:light-dark(#16a34a,#86efac);">-- 3. SP 한 번 호출 → 뷰 자동 재생성</span><br/>
+CALL SP_GENERATE_ONTOLOGY_VIEWS();
+      </code>
+    </div>
+  </div>
+
+  <h3>(2) 추론 규칙 — 역방향 관계 자동 생성</h3>
+  <div class="section-note" style="margin-bottom:0;">
+    <p>예: <code>supplies</code> 관계만 입력하면, 추론 엔진이 <code>supplied_by</code>(역방향)를 자동으로 생성합니다.</p>
+  </div>
+  <div class="compare-grid">
+    <div class="compare-box before">
+      <div class="cb-label">Before — 역방향 수동 관리</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#dc2626,#fca5a5);">-- supplies 엣지: SUP_1 → CMP_201</span><br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- supplied_by 엣지도 직접 INSERT해야 함:</span><br/>
+INSERT INTO KG_EDGE VALUES<br/>
+&nbsp;&nbsp;(UUID, 'CMP_201', 'SUP_1', 'supplied_by', ...);<br/>
+<span style="color:light-dark(#dc2626,#fca5a5);">-- 118개 supplies 엣지마다 수동 생성<br/>-- 데이터 변경 시 동기화 문제 발생</span>
+      </code>
+    </div>
+    <div class="compare-box after">
+      <div class="cb-label">After — 추론 규칙 사용</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#16a34a,#86efac);">-- ONT_RULE에 규칙이 이미 등록됨:</span><br/>
+-- RULE_INV_002: supplies → supplied_by<br/><br/>
+<span style="color:light-dark(#16a34a,#86efac);">-- SP 한 번 호출하면:</span><br/>
+CALL SP_INFER_INVERSE('RULE_INV_002');<br/><br/>
+<span style="color:light-dark(#16a34a,#86efac);">-- 결과: 118개 supplied_by 엣지가<br/>-- REL_EDGE_INFERRED에 자동 생성<br/>-- 원본 데이터 변경 시 다시 호출만 하면 됨</span>
+      </code>
+    </div>
+  </div>
+
+  <h3>(3) 뷰 자동 재생성 — SP 한 번 호출</h3>
+  <div class="section-note" style="margin-bottom:0;">
+    <p>예: 위에서 LogisticsProvider를 추가한 후, <code>SP_GENERATE_ONTOLOGY_VIEWS()</code>를 호출하면 ONT_CLASS_MAP을 읽어 <b>VW_ONT_LOGISTICSPROVIDER</b> 뷰를 자동 생성하고, <b>VW_ONT_ALL_ENTITIES</b>도 자동 갱신합니다.</p>
+  </div>
+  <div class="code-block"><span class="hl-str">-- SP가 ONT_CLASS_MAP 테이블을 순회하며 자동으로 뷰를 생성합니다:</span>
+<span class="hl-kw">CALL</span> <span class="hl-name">SP_GENERATE_ONTOLOGY_VIEWS</span>();
+
+<span class="hl-str">-- 결과:</span>
+<span class="hl-str">-- ✓ VW_ONT_LOGISTICSPROVIDER 뷰 생성됨 (새로 추가된 클래스)</span>
+<span class="hl-str">-- ✓ VW_ONT_ALL_ENTITIES 뷰 갱신됨 (새 클래스 UNION 포함)</span>
+<span class="hl-str">-- ✓ 기존 10개 VW_ONT_* 뷰도 함께 재생성됨</span>
+
+<span class="hl-str">-- 반환값 예시:</span>
+<span class="hl-str">-- {"views_created": ["VW_ONT_SUPPLIER", ..., "VW_ONT_LOGISTICSPROVIDER", "VW_ONT_ALL_ENTITIES"], "count": 12}</span></div>
+
+  <h3>ONT_CLASS &mdash; 클래스 계층 구조 (15개 클래스)</h3>
+  <div class="section-note">클래스는 온톨로지에 <b>어떤 엔티티 유형이 존재하는지</b> 정의합니다. <span class="tag tag-abstract">ABSTRACT</span> 클래스는 하위 Concrete 클래스를 그룹화하여 통합 조회를 가능하게 합니다 (예: "PhysicalAsset"을 조회하면 Component와 Product 모두 반환).</div>
+
+  <ul class="tree">
+    <li>
+      <span class="tree-node abstract">Entity <span class="tree-cnt">(abstract 루트 &mdash; 11개 하위 클래스)</span></span>
+      <ul>
+        <li>
+          <span class="tree-node abstract">Organization <span class="tree-cnt">(abstract)</span></span>
+          <ul><li><span class="tree-node concrete">Supplier <span class="tree-cnt">50 rows</span></span></li></ul>
+        </li>
+        <li>
+          <span class="tree-node abstract">PhysicalAsset <span class="tree-cnt">(abstract)</span></span>
+          <ul>
+            <li><span class="tree-node concrete">Component <span class="tree-cnt">80 rows</span></span></li>
+            <li><span class="tree-node concrete">Product <span class="tree-cnt">40 rows</span></span></li>
+          </ul>
+        </li>
+        <li>
+          <span class="tree-node abstract">Location <span class="tree-cnt">(abstract)</span></span>
+          <ul><li><span class="tree-node concrete">Warehouse <span class="tree-cnt">20 rows</span></span></li></ul>
+        </li>
+        <li>
+          <span class="tree-node abstract">BusinessEvent <span class="tree-cnt">(abstract)</span></span>
+          <ul>
+            <li><span class="tree-node concrete">Order <span class="tree-cnt">15,535 rows</span></span></li>
+            <li><span class="tree-node concrete">Shipment <span class="tree-cnt">9,320 rows</span></span></li>
+            <li><span class="tree-node concrete">SupplyContract <span class="tree-cnt">118 rows</span></span></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><span class="tree-node standalone">Bom <span class="tree-cnt">249행 (관계 테이블)</span></span></li>
+    <li><span class="tree-node standalone">Substitution <span class="tree-cnt">31행 (관계 테이블)</span></span></li>
+    <li><span class="tree-node standalone">Inventory <span class="tree-cnt">745행 (연결 테이블)</span></span></li>
+  </ul>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>클래스</th><th>부모</th><th>유형</th><th>설명</th><th>하위 수</th></tr></thead>
+    <tbody>
+      <tr><td>Entity</td><td>&mdash;</td><td><span class="tag tag-abstract">ABSTRACT</span></td><td>모든 엔티티의 최상위 추상 클래스</td><td>11</td></tr>
+      <tr><td>Organization</td><td>Entity</td><td><span class="tag tag-abstract">ABSTRACT</span></td><td>조직 엔티티 통합 클래스</td><td>1</td></tr>
+      <tr><td>Supplier</td><td>Organization</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>자재/부품 공급업체 (Tier 1-3)</td><td>0</td></tr>
+      <tr><td>PhysicalAsset</td><td>Entity</td><td><span class="tag tag-abstract">ABSTRACT</span></td><td>물리적 자산 (저장/이동 가능) 통합</td><td>2</td></tr>
+      <tr><td>Component</td><td>PhysicalAsset</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>부품: 원자재, 서브어셈블리, 모듈</td><td>0</td></tr>
+      <tr><td>Product</td><td>PhysicalAsset</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>고객에게 판매하는 완제품</td><td>0</td></tr>
+      <tr><td>Location</td><td>Entity</td><td><span class="tag tag-abstract">ABSTRACT</span></td><td>물리적 위치 통합 클래스</td><td>1</td></tr>
+      <tr><td>Warehouse</td><td>Location</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>물류센터 / 제조 거점</td><td>0</td></tr>
+      <tr><td>BusinessEvent</td><td>Entity</td><td><span class="tag tag-abstract">ABSTRACT</span></td><td>시간 기반 비즈니스 활동 통합</td><td>3</td></tr>
+      <tr><td>Order</td><td>BusinessEvent</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>고객 구매 주문</td><td>0</td></tr>
+      <tr><td>Shipment</td><td>BusinessEvent</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>물리적 상품 배송</td><td>0</td></tr>
+      <tr><td>SupplyContract</td><td>BusinessEvent</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>공급 계약 (가격/기간 포함)</td><td>0</td></tr>
+      <tr><td>Bom</td><td>&mdash;</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>BOM (Bill of Materials) 조립 관계</td><td>0</td></tr>
+      <tr><td>Substitution</td><td>&mdash;</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>부품 대체 가능성 관계</td><td>0</td></tr>
+      <tr><td>Inventory</td><td>&mdash;</td><td><span class="tag tag-concrete">CONCRETE</span></td><td>창고별 재고 수량</td><td>0</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>ONT_RELATION_DEF &mdash; 관계 정의 (9개 관계)</h3>
+  <div class="section-note">관계는 <b>엔티티 간의 연결 방식</b>을 정의합니다. 핵심 온톨로지 기능: <span class="tag tag-true">TRANSITIVE</span>는 재귀적 탐색을 가능하게 하고 (BOM 트리), <b>SYMMETRIC</b>는 양방향 검색을 (대체 부품), <b>INVERSE</b>는 역방향 엣지를 자동 생성합니다.</div>
+
+  <div class="rel-graph">
+    <div class="rel-card"><div class="rc-name">assembles_from</div><div class="rc-path">Bom <span class="rc-arrow">&rarr;</span> Component</div><div class="rc-tags"><span class="tag tag-true">TRANSITIVE</span><span class="tag tag-true">HIERARCHICAL</span></div></div>
+    <div class="rel-card"><div class="rc-name">supplies</div><div class="rc-path">Supplier <span class="rc-arrow">&rarr;</span> Component</div><div class="rc-tags"><span class="tag tag-abstract">N:M</span></div></div>
+    <div class="rel-card"><div class="rc-name">substitutes_for</div><div class="rc-path">Component <span class="rc-arrow">&harr;</span> Component</div><div class="rc-tags"><span class="tag tag-true">SYMMETRIC</span></div></div>
+    <div class="rel-card"><div class="rc-name">stored_in</div><div class="rc-path">Inventory <span class="rc-arrow">&rarr;</span> Warehouse</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+    <div class="rel-card"><div class="rc-name">orders_product</div><div class="rc-path">Order <span class="rc-arrow">&rarr;</span> Product</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+    <div class="rel-card"><div class="rc-name">fulfills</div><div class="rc-path">Shipment <span class="rc-arrow">&rarr;</span> Order</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+    <div class="rel-card"><div class="rc-name">ships_from</div><div class="rc-path">Shipment <span class="rc-arrow">&rarr;</span> Warehouse</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+    <div class="rel-card"><div class="rc-name">contracted_with</div><div class="rc-path">SupplyContract <span class="rc-arrow">&rarr;</span> Supplier</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+    <div class="rel-card"><div class="rc-name">contract_for</div><div class="rc-path">SupplyContract <span class="rc-arrow">&rarr;</span> Component</div><div class="rc-tags"><span class="tag tag-abstract">N:1</span></div></div>
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>관계명</th><th>Domain &rarr; Range</th><th>카디널리티</th><th>Transitive</th><th>Hierarchical</th><th>Inverse</th></tr></thead>
+    <tbody>
+      <tr><td><b>assembles_from</b></td><td>Bom &rarr; Component</td><td>N:M</td><td><span class="tag tag-true">YES</span></td><td><span class="tag tag-true">YES</span></td><td>used_in</td></tr>
+      <tr><td><b>supplies</b></td><td>Supplier &rarr; Component</td><td>N:M</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>supplied_by</td></tr>
+      <tr><td><b>substitutes_for</b></td><td>Component &harr; Component</td><td>N:M</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>substitutes_for</td></tr>
+      <tr><td><b>stored_in</b></td><td>Inventory &rarr; Warehouse</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>stores</td></tr>
+      <tr><td><b>orders_product</b></td><td>Order &rarr; Product</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>ordered_by</td></tr>
+      <tr><td><b>fulfills</b></td><td>Shipment &rarr; Order</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>fulfilled_by</td></tr>
+      <tr><td><b>ships_from</b></td><td>Shipment &rarr; Warehouse</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>ships_to_customer</td></tr>
+      <tr><td><b>contracted_with</b></td><td>SupplyContract &rarr; Supplier</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>&mdash;</td></tr>
+      <tr><td><b>contract_for</b></td><td>SupplyContract &rarr; Component</td><td>N:1</td><td><span class="tag-false">no</span></td><td><span class="tag-false">no</span></td><td>&mdash;</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>ONT_RULE &mdash; 추론 규칙 (7개)</h3>
+  <div class="section-note">추론 규칙은 기존 관계로부터 <b>새로운 관계를 자동으로 도출</b>합니다. INVERSE 규칙은 역방향 엣지를 생성하고, TRANSITIVE 규칙은 이행적 폐포(A&rarr;B, B&rarr;C &rArr; A&rarr;C)를 계산합니다.</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>규칙 ID</th><th>종류</th><th>대상</th><th>원본 관계</th><th>설명</th></tr></thead>
+    <tbody>
+      <tr><td>RULE_INV_001</td><td>INVERSE</td><td>used_in</td><td>assembles_from</td><td>X가 Y를 조립하면, Y는 X에 사용됨</td></tr>
+      <tr><td>RULE_INV_002</td><td>INVERSE</td><td>supplied_by</td><td>supplies</td><td>X가 Y를 공급하면, Y는 X에의해 공급됨</td></tr>
+      <tr><td>RULE_INV_003</td><td>INVERSE</td><td>substitutes_for</td><td>substitutes_for</td><td>대칭: 양방향 대체 관계</td></tr>
+      <tr><td>RULE_INV_004</td><td>INVERSE</td><td>stores</td><td>stored_in</td><td>품목이 창고에 저장되면, 창고는 해당 품목을 보관</td></tr>
+      <tr><td>RULE_INV_005</td><td>INVERSE</td><td>ordered_by</td><td>orders_product</td><td>주문-제품 관계의 역방향</td></tr>
+      <tr><td>RULE_INV_006</td><td>INVERSE</td><td>fulfilled_by</td><td>fulfills</td><td>배송-주문 관계의 역방향</td></tr>
+      <tr><td>RULE_INV_007</td><td>INVERSE</td><td>ships_to_customer</td><td>ships_from</td><td>배송-창고 관계의 역방향</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>기타 메타데이터 테이블</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>테이블</th><th>용도</th><th>행 수</th></tr></thead>
+    <tbody>
+      <tr><td>ONT_ONTOLOGY</td><td>온톨로지 레지스트리 (이름, 버전, 설명)</td><td>1</td></tr>
+      <tr><td>ONT_CLASS_MAP</td><td>클래스를 소스 테이블에 매핑 (KG_NODE 필터)</td><td>10</td></tr>
+      <tr><td>ONT_REL_MAP</td><td>관계를 KG_EDGE 필터에 매핑</td><td>9</td></tr>
+      <tr><td>ONT_RULE</td><td>추론 규칙 (inverse, transitive)</td><td>7</td></tr>
+      <tr><td>ONT_ROLE</td><td>RBAC 역할 (viewer, analyst, editor, admin)</td><td>4</td></tr>
+      <tr><td>REL_EDGE_INFERRED</td><td>추론 실행으로 생성된 엣지</td><td>0 (대기 중)</td></tr>
+      <tr><td>ONT_CONSTRAINT_VIOLATION</td><td>데이터 품질 위반 감지 결과</td><td>0 (대기 중)</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ===== LAYER 3 ===== -->
+<div class="layer-card">
+  <div class="layer-header">
+    <div class="layer-badge l3">L3</div>
+    <div><div class="layer-title">Abstract Views (VW_ONT_*)</div><div class="layer-desc">Concrete 클래스를 Abstract 부모 클래스 아래로 통합하는 UNION 기반 뷰; 계층 구조 및 유틸리티 뷰 포함</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">14</div><div class="stat-label">Abstract 뷰</div></div>
+    <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">계층 뷰</div></div>
+    <div class="stat-card"><div class="stat-value">1</div><div class="stat-label">유틸리티 뷰</div></div>
+  </div>
+
+  <div class="why-box">
+    <div class="why-title">Layer 3은 왜 필요한가?</div>
+    <p>기존 관계형 DB에서는 "모든 물리적 자산의 총 가치"를 구하려면 Component 테이블과 Product 테이블을 <b>개별적으로 쿼리한 후 수동으로 합산</b>해야 합니다. 새로운 자산 유형(예: Equipment)이 추가되면 쿼리도 수정해야 합니다.</p>
+    <p>Abstract View는 <b>클래스 계층에 따라 자동으로 UNION</b>합니다. PhysicalAsset 아래 새 클래스를 추가하면 뷰가 자동 갱신되므로 쿼리 변경이 불필요합니다.</p>
+    <div class="compare-grid">
+      <div class="compare-box before">
+        <div class="cb-label">Before &mdash; 개별 조회</div>
+        <code style="font-size:0.78rem;">SELECT 'Component', COUNT(*) FROM V_COMPONENT<br/>UNION ALL<br/>SELECT 'Product', COUNT(*) FROM V_PRODUCT<br/><span style="color:light-dark(#dc2626,#fca5a5);">-- 새 타입 추가 시 쿼리 수정 필요</span></code>
+      </div>
+      <div class="compare-box after">
+        <div class="cb-label">After &mdash; Abstract View</div>
+        <code style="font-size:0.78rem;">SELECT ENTITY_TYPE, COUNT(*)<br/>FROM VW_ONT_PHYSICAL_ASSET<br/>GROUP BY ENTITY_TYPE<br/><span style="color:light-dark(#16a34a,#86efac);">-- 새 타입 자동 포함</span></code>
+      </div>
+    </div>
+  </div>
+  <div class="section-note">Abstract 뷰는 온톨로지의 <b>핵심 차별화 요소</b>입니다. 개별 테이블을 몰라도 "모든 물리적 자산"을 조회할 수 있습니다. <code>VW_ONT_PHYSICAL_ASSET</code>는 Component + Product를 자동으로 UNION합니다.</div>
+
+  <h3>Abstract Class Views</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>뷰</th><th>통합 대상</th><th>사용 예시</th></tr></thead>
+    <tbody>
+      <tr><td>VW_ONT_ORGANIZATION</td><td>Supplier</td><td>"지역별 조직 엔티티 수는?"</td></tr>
+      <tr><td>VW_ONT_PHYSICAL_ASSET</td><td>Component + Product</td><td>"재고에 있는 모든 물리적 자산의 총 가치는?"</td></tr>
+      <tr><td>VW_ONT_LOCATION</td><td>Warehouse</td><td>"용량 포함 모든 위치 엔티티 목록"</td></tr>
+      <tr><td>VW_ONT_BUSINESS_EVENT</td><td>Order + Shipment + SupplyContract</td><td>"이번 달 모든 비즈니스 활동은?"</td></tr>
+      <tr><td>VW_ONT_ALL_ENTITIES</td><td>전체 10개 Concrete 클래스</td><td>"시스템 전체 엔티티 수"</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>VW_ONT_PHYSICAL_ASSET 샘플 조회</h3>
+  <div class="code-block"><span class="hl-kw">SELECT</span> ENTITY_ID, ENTITY_TYPE, ENTITY_NAME
+<span class="hl-kw">FROM</span> <span class="hl-name">VW_ONT_PHYSICAL_ASSET</span> <span class="hl-kw">LIMIT</span> <span class="hl-num">5</span>;
+
+<span class="hl-str">-- 결과: Component와 Product가 통합되어 반환</span>
+ENTITY_ID   ENTITY_TYPE   ENTITY_NAME
+CMP_101     Component     Lithium Carbonate
+CMP_201     Component     Battery Cell 4680
+CMP_303     Component     Display Assembly 15.6"
+PRD_1001    Product       EcoBook Pro 15
+PRD_1004    Product       SmartPhone X1</div>
+
+  <h3>계층 구조 &amp; 유틸리티 뷰</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>뷰</th><th>용도</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>VW_ONT_SUBCLASS_OF</td><td>직계 부모-자식 클래스 관계</td><td><code>WHERE CHILD_CLASS = 'Supplier'</code></td></tr>
+      <tr><td>VW_DESCENDANTS</td><td>재귀적 하위 클래스 전체 조회</td><td><code>WHERE ANCESTOR = 'Entity'</code> &rarr; 11행</td></tr>
+      <tr><td>VW_ANCESTORS</td><td>재귀적 상위 클래스 전체 조회</td><td><code>WHERE DESCENDANT = 'Supplier'</code> &rarr; Entity, Organization</td></tr>
+      <tr><td>VW_ONT_HIERARCHY_STATS</td><td>클래스 계층 통계</td><td>Entity: 11개 하위, Supplier: 2개 상위</td></tr>
+      <tr><td>REL_RESOLVED</td><td>노드 이름이 해석된 엣지 뷰</td><td>"Samsung SDI supplies Battery Cell 4680"</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>REL_RESOLVED 샘플 데이터</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>REL_NAME</th><th>SRC_NAME</th><th>SRC_TYPE</th><th>DST_NAME</th><th>DST_TYPE</th></tr></thead>
+    <tbody>
+      <tr><td>supplies</td><td>SQM</td><td>Supplier</td><td>Lithium Carbonate</td><td>Component</td></tr>
+      <tr><td>supplies</td><td>Ganfeng Lithium</td><td>Supplier</td><td>Lithium Carbonate</td><td>Component</td></tr>
+      <tr><td>supplies</td><td>Albemarle</td><td>Supplier</td><td>Cobalt Powder</td><td>Component</td></tr>
+      <tr><td>supplies</td><td>Corning</td><td>Supplier</td><td>Glass Substrate</td><td>Component</td></tr>
+      <tr><td>supplies</td><td>SK Hynix</td><td>Supplier</td><td>DRAM 16GB Module</td><td>Component</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ===== LAYER 4 ===== -->
+<div class="layer-card">
+  <div class="layer-header">
+    <div class="layer-badge l4">L4</div>
+    <div><div class="layer-title">Semantic Views</div><div class="layer-desc">Cortex Analyst용 시맨틱 모델 &mdash; Facts, Dimensions, Metrics, Relationships 정의</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">2</div><div class="stat-label">Semantic Views</div></div>
+    <div class="stat-card"><div class="stat-value">10</div><div class="stat-label">Tables (Base)</div></div>
+    <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">Tables (KG)</div></div>
+  </div>
+
+  <div class="why-box">
+    <div class="why-title">Layer 4는 왜 필요한가?</div>
+    <p>Layer 1~3은 데이터를 저장하고 구조화하지만, <b>자연어 질문을 SQL로 변환</b>하려면 AI가 "REGION은 지역을 의미하고, total_orders는 COUNT(DISTINCT ORDER_ID)로 계산한다"는 것을 알아야 합니다. Semantic View는 이런 <b>비즈니스 의미(시맨틱)</b>를 Facts, Dimensions, Metrics, Synonyms으로 정의하여 Cortex Analyst가 정확한 SQL을 생성할 수 있게 합니다.</p>
+  </div>
+
+  <h3>SV_SUPPLY_CHAIN_BASE</h3>
+  <div class="section-note"><b>10개 원본 테이블</b>에 대한 직접 Semantic Model. 구체적인 데이터 조회에 사용: 가격, 주문 수, 재고 수량, 계약 상세 등.</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>구성요소</th><th>수</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>Tables</td><td>10</td><td>sup (SUPPLIERS), cmp (COMPONENTS), prd (PRODUCTS), ord (ORDERS), ...</td></tr>
+      <tr><td>Relationships</td><td>8</td><td>bom_child_component, contract_supplier, order_product, shipment_order, ...</td></tr>
+      <tr><td>Facts</td><td>22</td><td>UNIT_COST, PRICE, QUANTITY, AGREED_UNIT_PRICE, RELIABILITY_SCORE, ...</td></tr>
+      <tr><td>Dimensions</td><td>33</td><td>REGION, CATEGORY, CUSTOMER_NAME, STATUS, CARRIER, IS_ECO_CERTIFIED, ...</td></tr>
+      <tr><td>Metrics</td><td>12</td><td>total_suppliers, avg_unit_cost, total_orders, total_inventory, ...</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>SV_SUPPLY_CHAIN_KG</h3>
+  <div class="section-note"><b>Knowledge Graph 테이블</b> (KG_NODE, KG_EDGE, ONT_CLASS, ONT_RELATION_DEF)에 대한 Semantic Model. 그래프 구조 질의에 사용.</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>구성요소</th><th>수</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>Tables</td><td>4</td><td>node (KG_NODE), edge (KG_EDGE), cls (ONT_CLASS), rel (ONT_RELATION_DEF)</td></tr>
+      <tr><td>Relationships</td><td>2</td><td>edge_source (SRC_ID &rarr; NODE_ID), edge_target (DST_ID &rarr; NODE_ID)</td></tr>
+      <tr><td>Facts</td><td>5</td><td>NODE_ID, EDGE_ID, SRC_ID, DST_ID, WEIGHT</td></tr>
+      <tr><td>Dimensions</td><td>16</td><td>NODE_TYPE, EDGE_TYPE, CLASS_NAME, IS_TRANSITIVE, CARDINALITY, ...</td></tr>
+      <tr><td>Metrics</td><td>4</td><td>total_nodes, total_edges, total_classes, total_relations</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ===== LAYER 5 ===== -->
+<div class="layer-card">
+  <div class="layer-header">
+    <div class="layer-badge l5">L5</div>
+    <div><div class="layer-title">Cortex Agent</div><div class="layer-desc">자연어 질문을 Semantic View 또는 Graph UDF로 라우팅하는 AI 인터페이스</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">1</div><div class="stat-label">에이전트</div></div>
+    <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">도구</div></div>
+  </div>
+
+  <div class="why-box">
+    <div class="why-title">Layer 5는 왜 필요한가?</div>
+    <p>Semantic View 2개(Base + KG)와 Graph Traversal UDF 3개가 있으므로, 사용자가 질문할 때 <b>어떤 Tool을 사용해야 하는지</b> 판단해야 합니다. "Samsung SDI가 공급하는 부품은?"은 Base에, "Battery Cell 4680의 전체 BOM 트리"는 Graph UDF에 물어야 합니다.</p>
+    <p>Cortex Agent는 질문의 의도를 파악하여 <b>자동으로 적절한 Tool을 선택</b>하고 SQL을 생성/실행하여 결과를 반환합니다.</p>
+  </div>
+
+  <h3>RETAIL_SUPPLY_CHAIN_AGENT</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tool 이름</th><th>타입</th><th>리소스</th><th>사용 용도</th></tr></thead>
+    <tbody>
+      <tr><td><b>base_query</b></td><td>cortex_analyst_text_to_sql</td><td>SV_SUPPLY_CHAIN_BASE</td><td>구체적 데이터: 가격, 수량, 재고, 날짜, 특정 엔티티 조회</td></tr>
+      <tr><td><b>kg_query</b></td><td>cortex_analyst_text_to_sql</td><td>SV_SUPPLY_CHAIN_KG</td><td>그래프 구조: 노드/엣지 타입 분포, 클래스 계층 메타데이터</td></tr>
+      <tr><td style="color:light-dark(#f59e0b,#fde68a);font-weight:700;">expand_descendants</td><td>generic (UDF)</td><td>EXPAND_DESCENDANTS_TOOL</td><td>BOM 트리 하향 확장 (제품 → 부품 → 원자재)</td></tr>
+      <tr><td style="color:light-dark(#f59e0b,#fde68a);font-weight:700;">get_ancestors</td><td>generic (UDF)</td><td>GET_ANCESTORS_TOOL</td><td>상향 추적 (원자재 → 어떤 제품에 사용되나?)</td></tr>
+      <tr><td style="color:light-dark(#f59e0b,#fde68a);font-weight:700;">get_direct_children</td><td>generic (UDF)</td><td>GET_DIRECT_CHILDREN_TOOL</td><td>직계 자식만 조회 (한 단계)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="section-note">
+    <b>sql_exec</b> 타입 tool은 Agent가 직접 SQL을 작성하여 실행할 수 있게 합니다. 이를 통해 Agent가 <code>SELECT * FROM TABLE(EXPAND_DESCENDANTS_TOOL('Battery Cell 4680'))</code>와 같은 재귀 UDF를 <b>실시간으로</b> 호출합니다. cortex_analyst_text_to_sql은 Semantic View 기반 자연어→SQL 변환만 가능하지만, sql_exec는 임의의 SQL 실행이 가능합니다.
+  </div>
+
+  <h3>질문 라우팅 흐름</h3>
+  <div class="routing-flow">
+    <div class="rf-box" style="background:#64748b">사용자<br/>질문</div>
+    <div class="rf-arrow">&rarr;</div>
+    <div class="rf-box" style="background:#ec4899">Agent<br/><small>RETAIL_SUPPLY<br/>_CHAIN_AGENT</small></div>
+    <div class="rf-arrow">&rarr;</div>
+    <div class="rf-branch">
+      <div class="rf-box" style="background:#d946ef"><b>base_query</b><br/><small>가격, 주문, 재고</small></div>
+      <div class="rf-box" style="background:#8b5cf6"><b>kg_query</b><br/><small>그래프 메타데이터</small></div>
+      <div class="rf-box" style="background:#f59e0b;color:#000"><b>expand_descendants</b><br/><small>BOM 트리 확장</small></div>
+      <div class="rf-box" style="background:#f59e0b;color:#000"><b>get_ancestors</b><br/><small>상향 추적</small></div>
+      <div class="rf-box" style="background:#f59e0b;color:#000"><b>get_direct_children</b><br/><small>직계 자식</small></div>
+    </div>
+    <div class="rf-arrow">&rarr;</div>
+    <div class="rf-box" style="background:#22c55e">SQL +<br/>결과</div>
+  </div>
+
+  <h3>Tool별 질문 예시</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>질문</th><th>라우팅 대상</th></tr></thead>
+    <tbody>
+      <tr><td>"지역별 공급업체 수는?"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
+      <tr><td>"전자제품 평균 가격은?"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
+      <tr><td>"미처리 주문과 총 수량을 보여줘"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
+      <tr><td>"배터리 관련 부품을 공급하는 업체는?"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
+      <tr><td>"Knowledge Graph에 몇 개의 엔티티 타입이 있나?"</td><td><span class="tag tag-abstract">kg_query</span></td></tr>
+      <tr><td>"Supplier와 Component를 연결하는 관계는?"</td><td><span class="tag tag-abstract">kg_query</span></td></tr>
+      <tr><td>"Battery Cell 4680의 전체 BOM 트리를 보여줘"</td><td><span class="tag tag-true">expand_descendants</span></td></tr>
+      <tr><td>"Lithium Carbonate의 상위 조립 경로는?"</td><td><span class="tag tag-true">get_ancestors</span></td></tr>
+      <tr><td>"EcoBook Pro 15의 직접 구성 부품은?"</td><td><span class="tag tag-true">get_direct_children</span></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ===== PROCEDURES & UDFS ===== -->
+<h2>Stored Procedures &amp; UDFs</h2>
+<div class="layer-card">
+  <div class="why-box">
+    <div class="why-title">추론 엔진과 그래프 도구는 왜 필요한가?</div>
+    <p>온톨로지의 진정한 가치는 <b>명시적으로 입력하지 않은 관계를 자동으로 도출</b>하는 데 있습니다. 예를 들어 "A가 B를 공급한다"만 입력하면 "B는 A로부터 공급받는다"(inverse)를 자동 생성하고, BOM의 재귀 관계를 따라 "원자재에서 최종 제품까지의 전체 경로"(transitive closure)를 계산합니다.</p>
+  </div>
+
+  <h3>실행 시점 구분</h3>
+  <div class="section-note">추론 엔진(SP)과 그래프 도구(UDF)는 <b>실행 시점과 주체가 다릅니다.</b> 이 구분을 이해하는 것이 온톨로지 아키텍처의 핵심입니다.</div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>컴포넌트</th><th>실행 시점</th><th>실행 주체</th><th>결과 저장</th><th>실시간 여부</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>추론 엔진 SPs</b><br/><small>SP_INFER_TRANSITIVE<br/>SP_INFER_INVERSE</small></td>
+        <td>데이터 적재/변경 후</td>
+        <td>DBA 수동 실행 또는<br/>Snowflake Task 스케줄</td>
+        <td>REL_EDGE_INFERRED<br/>테이블에 사전 저장</td>
+        <td><span class="tag" style="background:light-dark(#dbeafe,#1e3a5f);color:light-dark(#1e40af,#93c5fd);">배치</span></td>
+      </tr>
+      <tr>
+        <td><b>데이터 품질 SPs</b><br/><small>SP_CHECK_CARDINALITY<br/>SP_CHECK_REFERENTIAL</small></td>
+        <td>데이터 적재/변경 후</td>
+        <td>DBA 수동 실행 또는<br/>Snowflake Task 스케줄</td>
+        <td>ONT_CONSTRAINT_VIOLATION<br/>테이블에 저장</td>
+        <td><span class="tag" style="background:light-dark(#dbeafe,#1e3a5f);color:light-dark(#1e40af,#93c5fd);">배치</span></td>
+      </tr>
+      <tr>
+        <td><b>뷰 생성 SP</b><br/><small>SP_GENERATE_ONTOLOGY_VIEWS</small></td>
+        <td>온톨로지 구조 변경 후</td>
+        <td>DBA 수동 실행</td>
+        <td>VW_ONT_* 뷰를<br/>CREATE OR REPLACE</td>
+        <td><span class="tag" style="background:light-dark(#f3e8ff,#3b0764);color:light-dark(#7c3aed,#c4b5fd);">일회성</span></td>
+      </tr>
+      <tr style="background:light-dark(#fefce8,#422006);">
+        <td><b>Graph Traversal UDFs</b><br/><small>EXPAND_DESCENDANTS_TOOL<br/>GET_ANCESTORS_TOOL<br/>GET_DIRECT_CHILDREN_TOOL</small></td>
+        <td><b>사용자가 질문할 때</b></td>
+        <td><b>Cortex Agent</b>가<br/>generic tool로<br/>직접 호출</td>
+        <td>호출 시 실시간 계산<br/>(저장 없음)</td>
+        <td><span class="tag tag-true">실시간</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>실행 흐름 비교</h3>
+  <div class="compare-grid">
+    <div class="compare-box before" style="border-color:light-dark(#93c5fd,#1e40af);background:light-dark(#eff6ff,#172554);">
+      <div class="cb-label" style="color:light-dark(#1e40af,#93c5fd);">배치 흐름 — 추론 엔진 (사전 준비)</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#1e40af,#93c5fd);">-- 데이터 적재 완료 후 DBA가 실행</span><br/><br/>
+CALL SP_INFER_INVERSE('RULE_ALL');<br/>
+<span style="color:light-dark(#64748b,#94a3b8);">→ 역방향 엣지 REL_EDGE_INFERRED에 저장</span><br/><br/>
+CALL SP_INFER_TRANSITIVE('assembles_from', 'R1');<br/>
+<span style="color:light-dark(#64748b,#94a3b8);">→ 이행적 폐포 REL_EDGE_INFERRED에 저장</span><br/><br/>
+CALL SP_CHECK_REFERENTIAL('supplies', 'CHK1');<br/>
+<span style="color:light-dark(#64748b,#94a3b8);">→ 무결성 위반 ONT_CONSTRAINT_VIOLATION에 저장</span><br/><br/>
+<span style="color:light-dark(#1e40af,#93c5fd);">-- 이후 Agent가 이 테이블을 조회만 함</span>
+      </code>
+    </div>
+    <div class="compare-box after" style="border-color:light-dark(#f59e0b,#b45309);background:light-dark(#fefce8,#422006);">
+      <div class="cb-label" style="color:light-dark(#b45309,#fde68a);">실시간 흐름 — Graph Tool (Agent가 호출)</div>
+      <code style="font-size:0.78rem;">
+<span style="color:light-dark(#b45309,#fde68a);">-- 사용자: "Battery Cell 4680의 BOM 트리 보여줘"</span><br/><br/>
+<span style="color:light-dark(#64748b,#94a3b8);">1. Agent가 graph_tool 선택</span><br/>
+<span style="color:light-dark(#64748b,#94a3b8);">2. Agent가 SQL 생성:</span><br/>
+SELECT * FROM TABLE(<br/>
+&nbsp;&nbsp;EXPAND_DESCENDANTS_TOOL('Battery Cell 4680')<br/>
+);<br/><br/>
+<span style="color:light-dark(#64748b,#94a3b8);">3. UDF가 KG_EDGE를 재귀 탐색하여<br/>&nbsp;&nbsp;&nbsp;실시간으로 결과 반환</span><br/>
+<span style="color:light-dark(#64748b,#94a3b8);">4. Agent가 결과를 사용자에게 전달</span>
+      </code>
+    </div>
+  </div>
+  <h3>추론 엔진 (Stored Procedures)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>프로시저</th><th>용도</th><th>호출 예시</th></tr></thead>
+    <tbody>
+      <tr><td>SP_INFER_TRANSITIVE</td><td>이행적 폐포 계산 (A&rarr;B, B&rarr;C &rArr; A&rarr;C)</td><td><code>CALL SP_INFER_TRANSITIVE('assembles_from', 'R1')</code></td></tr>
+      <tr><td>SP_INFER_INVERSE</td><td>ONT_RELATION_DEF 기반 역방향 엣지 생성</td><td><code>CALL SP_INFER_INVERSE('R2')</code></td></tr>
+      <tr><td>SP_CHECK_CARDINALITY_SINGLE</td><td>N:1 카디널리티 제약 검증</td><td><code>CALL SP_CHECK_CARDINALITY_SINGLE('orders_product', 'CK1')</code></td></tr>
+      <tr><td>SP_CHECK_REFERENTIAL</td><td>엣지 엔드포인트 참조 무결성 검증</td><td><code>CALL SP_CHECK_REFERENTIAL('supplies', 'REF1')</code></td></tr>
+      <tr><td>SP_GENERATE_ONTOLOGY_VIEWS</td><td>메타데이터 기반 VW_ONT_* 뷰 재생성</td><td><code>CALL SP_GENERATE_ONTOLOGY_VIEWS()</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>그래프 탐색 UDFs</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>UDF</th><th>용도</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>EXPAND_DESCENDANTS_TOOL</td><td>특정 개념의 모든 하위 노드 조회</td><td><code>SELECT * FROM TABLE(EXPAND_DESCENDANTS_TOOL('Battery Cell 4680'))</code></td></tr>
+      <tr><td>GET_ANCESTORS_TOOL</td><td>특정 개념의 모든 상위 노드 조회</td><td><code>SELECT * FROM TABLE(GET_ANCESTORS_TOOL('Lithium Carbonate'))</code></td></tr>
+      <tr><td>GET_DIRECT_CHILDREN_TOOL</td><td>직계 자식 노드만 조회</td><td><code>SELECT * FROM TABLE(GET_DIRECT_CHILDREN_TOOL('EcoBook Pro 15'))</code></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<script src="/libs/d3@7.9.0/d3.min.js"></script>
+<script>
+(function() {
+  if (typeof d3 === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js';
+    s.onload = initGraph;
+    document.head.appendChild(s);
+  } else {
+    initGraph();
+  }
+
+  function initGraph() {
+    var container = document.getElementById('ontology-graph');
+    var tooltip = document.getElementById('graph-tooltip');
+    var zoomLabel = document.getElementById('zoom-level');
+    var W = container.clientWidth, H = container.clientHeight;
+
+    var classes = [
+      {id:'Entity',        parent:null,             abs:true,  rows:0,     desc:'모든 엔티티의 최상위 추상 클래스'},
+      {id:'Organization',  parent:'Entity',         abs:true,  rows:0,     desc:'조직 엔티티 통합'},
+      {id:'Supplier',      parent:'Organization',   abs:false, rows:50,    desc:'자재/부품 공급업체 (Tier 1-3)'},
+      {id:'PhysicalAsset', parent:'Entity',         abs:true,  rows:0,     desc:'물리적 자산 통합 (저장/이동 가능)'},
+      {id:'Component',     parent:'PhysicalAsset',  abs:false, rows:80,    desc:'부품: 원자재, 서브어셈블리, 모듈'},
+      {id:'Product',       parent:'PhysicalAsset',  abs:false, rows:40,    desc:'고객에게 판매하는 완제품'},
+      {id:'Location',      parent:'Entity',         abs:true,  rows:0,     desc:'물리적 위치 통합'},
+      {id:'Warehouse',     parent:'Location',       abs:false, rows:20,    desc:'물류센터 / 제조 거점'},
+      {id:'BusinessEvent', parent:'Entity',         abs:true,  rows:0,     desc:'시간 기반 비즈니스 활동 통합'},
+      {id:'Order',         parent:'BusinessEvent',  abs:false, rows:15535, desc:'고객 구매 주문'},
+      {id:'Shipment',      parent:'BusinessEvent',  abs:false, rows:9320,  desc:'물리적 상품 배송'},
+      {id:'SupplyContract',parent:'BusinessEvent',  abs:false, rows:118,   desc:'공급 계약 (가격/기간 포함)'},
+      {id:'Bom',           parent:null,             abs:false, rows:249,   desc:'BOM 조립 관계 테이블'},
+      {id:'Substitution',  parent:null,             abs:false, rows:31,    desc:'부품 대체 가능성 관계'},
+      {id:'Inventory',     parent:null,             abs:false, rows:745,   desc:'창고별 재고 수량'}
+    ];
+
+    var relations = [
+      {source:'Supplier',      target:'Component',     name:'supplies',         label:'supplies',         color:'#22c55e', trans:false, sym:false},
+      {source:'Bom',           target:'Component',     name:'assembles_from',   label:'assembles_from',   color:'#14b8a6', trans:true,  sym:false},
+      {source:'Component',     target:'Component',     name:'substitutes_for',  label:'substitutes_for',  color:'#f59e0b', trans:false, sym:true},
+      {source:'Inventory',     target:'Warehouse',     name:'stored_in',        label:'stored_in',        color:'#8b5cf6', trans:false, sym:false},
+      {source:'Order',         target:'Product',       name:'orders_product',   label:'orders_product',   color:'#ef4444', trans:false, sym:false},
+      {source:'Shipment',      target:'Order',         name:'fulfills',         label:'fulfills',         color:'#f97316', trans:false, sym:false},
+      {source:'Shipment',      target:'Warehouse',     name:'ships_from',       label:'ships_from',       color:'#eab308', trans:false, sym:false},
+      {source:'SupplyContract',target:'Supplier',      name:'contracted_with',  label:'contracted_with',  color:'#6366f1', trans:false, sym:false},
+      {source:'SupplyContract',target:'Component',     name:'contract_for',     label:'contract_for',     color:'#3b82f6', trans:false, sym:false},
+      {source:'Inventory',     target:'Product',       name:'inventory_of',     label:'inventory_of',     color:'#ec4899', trans:false, sym:false},
+      {source:'Inventory',     target:'Component',     name:'inventory_of',     label:'inventory_of',     color:'#ec4899', trans:false, sym:false}
+    ];
+
+    var links = [];
+    classes.forEach(function(c) {
+      if (c.parent) links.push({source: c.id, target: c.parent, type: 'subClassOf', color: '#93c5fd', label: 'subClassOf', dashed: true});
+    });
+    relations.forEach(function(r) {
+      links.push({source: r.source, target: r.target, type: 'relation', color: r.color, label: r.label, dashed: false, trans: r.trans, sym: r.sym});
+    });
+
+    var nodes = classes.map(function(c) {
+      return {id: c.id, abs: c.abs, rows: c.rows, parent: c.parent, desc: c.desc};
+    });
+
+    function nodeRadius(d) {
+      if (d.abs) return 24;
+      if (d.rows > 10000) return 22;
+      if (d.rows > 500) return 18;
+      if (d.rows > 0) return 15;
+      return 12;
+    }
+    function nodeColor(d) {
+      if (d.abs) return '#6366f1';
+      if (!d.parent) return '#f59e0b';
+      return '#22c55e';
+    }
+
+    var svg = d3.select('#ontology-graph').append('svg')
+      .attr('width', W).attr('height', H)
+      .attr('viewBox', [0, 0, W, H]);
+
+    // ---- ZOOM ----
+    var g = svg.append('g');
+
+    var zoom = d3.zoom()
+      .scaleExtent([0.3, 5])
+      .on('zoom', function(event) {
+        g.attr('transform', event.transform);
+        zoomLabel.textContent = Math.round(event.transform.k * 100) + '%';
+      });
+
+    svg.call(zoom);
+
+    // Zoom control buttons
+    document.getElementById('zoom-in').addEventListener('click', function() {
+      svg.transition().duration(300).call(zoom.scaleBy, 1.4);
+    });
+    document.getElementById('zoom-out').addEventListener('click', function() {
+      svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+    });
+    document.getElementById('zoom-reset').addEventListener('click', function() {
+      svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
+    });
+
+    // Arrow markers
+    var defs = svg.append('defs');
+    var markerColors = ['#93c5fd','#22c55e','#14b8a6','#f59e0b','#8b5cf6','#ef4444','#f97316','#eab308','#6366f1','#3b82f6'];
+    markerColors.forEach(function(c) {
+      defs.append('marker')
+        .attr('id', 'arrow-' + c.replace('#',''))
+        .attr('viewBox', '0 -5 10 10').attr('refX', 28).attr('refY', 0)
+        .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-4L10,0L0,4').attr('fill', c);
+    });
+
+    var simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(function(d){return d.id;}).distance(function(l) {
+        return l.type === 'subClassOf' ? 80 : 140;
+      }).strength(function(l) {
+        return l.type === 'subClassOf' ? 1.2 : 0.4;
+      }))
+      .force('charge', d3.forceManyBody().strength(-400))
+      .force('center', d3.forceCenter(W/2, H/2))
+      .force('collision', d3.forceCollide().radius(function(d){return nodeRadius(d)+10;}))
+      .force('x', d3.forceX(W/2).strength(0.05))
+      .force('y', d3.forceY(H/2).strength(0.05));
+
+    // All visual elements go into g (the zoomable group)
+    var link = g.append('g').selectAll('line').data(links).enter().append('line')
+      .attr('stroke', function(d){return d.color;})
+      .attr('stroke-width', function(d){return d.type === 'subClassOf' ? 2 : 2.5;})
+      .attr('stroke-dasharray', function(d){return d.dashed ? '6,4' : null;})
+      .attr('marker-end', function(d){return 'url(#arrow-' + d.color.replace('#','') + ')';})
+      .attr('opacity', 0.7);
+
+    var linkLabel = g.append('g').selectAll('text').data(links.filter(function(d){return d.type==='relation';}))
+      .enter().append('text')
+      .text(function(d){return d.label;})
+      .attr('font-size', 9).attr('fill', function(d){return d.color;})
+      .attr('text-anchor', 'middle').attr('dy', -6)
+      .attr('font-weight', 600).attr('opacity', 0.85)
+      .style('pointer-events', 'none');
+
+    var node = g.append('g').selectAll('g').data(nodes).enter().append('g')
+      .call(d3.drag()
+        .on('start', function(event, d) {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x; d.fy = d.y;
+        })
+        .on('drag', function(event, d) { d.fx = event.x; d.fy = event.y; })
+        .on('end', function(event, d) {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null; d.fy = null;
+        })
+      );
+
+    node.append('circle')
+      .attr('r', function(d){return nodeRadius(d);})
+      .attr('fill', function(d){return nodeColor(d);})
+      .attr('stroke', function(d){return d.abs ? '#93c5fd' : (d.parent ? '#6ee7b7' : '#fbbf24');})
+      .attr('stroke-width', function(d){return d.abs ? 3 : 2;})
+      .attr('stroke-dasharray', function(d){return d.abs ? '5,3' : null;})
+      .attr('opacity', 0.9).attr('cursor', 'grab');
+
+    node.append('text')
+      .text(function(d){return d.id;})
+      .attr('text-anchor', 'middle').attr('dy', function(d){return nodeRadius(d) + 14;})
+      .attr('font-size', 11).attr('font-weight', 600)
+      .attr('fill', 'currentColor').style('pointer-events', 'none');
+
+    node.filter(function(d){return d.rows > 0;}).append('text')
+      .text(function(d){return d.rows >= 1000 ? (d.rows/1000).toFixed(1)+'k' : d.rows;})
+      .attr('text-anchor', 'middle').attr('dy', 4)
+      .attr('font-size', 9).attr('font-weight', 700).attr('fill', '#fff')
+      .style('pointer-events', 'none');
+
+    node.filter(function(d){return d.abs;}).append('text')
+      .text('abstract')
+      .attr('text-anchor', 'middle').attr('dy', 4)
+      .attr('font-size', 8).attr('font-weight', 600).attr('fill', '#c7d2fe')
+      .style('pointer-events', 'none');
+
+    node.on('mouseover', function(event, d) {
+      var tags = [];
+      if (d.abs) tags.push('<span style="background:#3b82f6;color:#fff;padding:1px 6px;border-radius:3px;font-size:0.7rem;">ABSTRACT</span>');
+      else tags.push('<span style="background:#059669;color:#fff;padding:1px 6px;border-radius:3px;font-size:0.7rem;">CONCRETE</span>');
+      if (d.parent) tags.push('<span style="color:#94a3b8;font-size:0.75rem;">parent: '+d.parent+'</span>');
+      var rels = relations.filter(function(r){return r.source === d.id || r.target === d.id;});
+      var relHtml = rels.length > 0 ? '<div style="margin-top:4px;border-top:1px solid #334155;padding-top:4px;">' +
+        rels.map(function(r){
+          var dir = r.source === d.id ? d.id + ' &rarr; ' + r.target : r.source + ' &rarr; ' + d.id;
+          var badges = '';
+          if (r.trans) badges += ' <span style="color:#fde68a;font-size:0.65rem;">[TRANSITIVE]</span>';
+          if (r.sym) badges += ' <span style="color:#fde68a;font-size:0.65rem;">[SYMMETRIC]</span>';
+          return '<div style="font-size:0.75rem;"><b style="color:'+r.color+';">'+r.label+'</b> '+dir+badges+'</div>';
+        }).join('') + '</div>' : '';
+      tooltip.innerHTML = '<div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">'+d.id+'</div>' +
+        '<div style="margin-bottom:4px;">'+tags.join(' ')+'</div>' +
+        '<div style="color:#94a3b8;font-size:0.78rem;">'+d.desc+'</div>' +
+        (d.rows > 0 ? '<div style="color:#93c5fd;font-size:0.78rem;margin-top:2px;">'+d.rows.toLocaleString()+' rows</div>' : '') +
+        relHtml;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+    })
+    .on('mousemove', function(event) {
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+    })
+    .on('mouseout', function() { tooltip.style.display = 'none'; });
+
+    simulation.on('tick', function() {
+      link.attr('x1',function(d){return d.source.x;}).attr('y1',function(d){return d.source.y;})
+          .attr('x2',function(d){return d.target.x;}).attr('y2',function(d){return d.target.y;});
+      linkLabel.attr('x', function(d){return (d.source.x+d.target.x)/2;})
+               .attr('y', function(d){return (d.source.y+d.target.y)/2;});
+      node.attr('transform', function(d){return 'translate('+d.x+','+d.y+')';});
+    });
+
+    window.addEventListener('resize', function() {
+      W = container.clientWidth; H = container.clientHeight;
+      svg.attr('width', W).attr('height', H).attr('viewBox', [0, 0, W, H]);
+      simulation.force('center', d3.forceCenter(W/2, H/2));
+      simulation.alpha(0.3).restart();
+    });
+  }
+})();
+</script>
+</body>
+</html>
