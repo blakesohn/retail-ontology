@@ -130,7 +130,7 @@
 <div class="arch-stack">
   <div class="arch-box l5bg"><div class="ab-title">Layer 5: Cortex Agent</div><div class="ab-sub">RETAIL_SUPPLY_CHAIN_AGENT &mdash; 자연어 질문을 적절한 Semantic Model로 라우팅</div></div>
   <div class="arch-arrow">&darr;</div>
-  <div class="arch-box l4bg"><div class="ab-title">Layer 4: Semantic Views</div><div class="ab-sub">SV_SUPPLY_CHAIN_BASE &bull; SV_SUPPLY_CHAIN_KG</div></div>
+  <div class="arch-box l4bg"><div class="ab-title">Layer 4: Semantic Views (3-Model Strategy)</div><div class="ab-sub">SV_SUPPLY_CHAIN_BASE &bull; SV_SUPPLY_CHAIN_ONTOLOGY &bull; SV_SUPPLY_CHAIN_KG</div></div>
   <div class="arch-arrow">&darr;</div>
   <div class="arch-box l3bg"><div class="ab-title">Layer 3: Abstract Views</div><div class="ab-sub">VW_ONT_* (14개 뷰) &bull; 계층 구조 + 유틸리티 뷰</div></div>
   <div class="arch-arrow">&darr;</div>
@@ -549,7 +549,7 @@ CALL SP_INFER_INVERSE('RULE_INV_002');<br/><br/>
       </div>
     </div>
   </div>
-  <div class="section-note">Abstract 뷰는 온톨로지의 <b>핵심 차별화 요소</b>입니다. 개별 테이블을 몰라도 "모든 물리적 자산"을 조회할 수 있습니다. <code>VW_ONT_PHYSICAL_ASSET</code>는 Component + Product를 자동으로 UNION합니다.</div>
+  <div class="section-note">Abstract 뷰는 온톨로지의 <b>핵심 차별화 요소</b>입니다. 개별 테이블을 몰라도 "모든 물리적 자산"을 조회할 수 있습니다. <code>VW_ONT_PHYSICAL_ASSET</code>는 Component + Product를 자동으로 UNION합니다. <b>이 뷰들은 Layer 4의 SV_SUPPLY_CHAIN_ONTOLOGY (Model 2)를 통해 Agent에 연결됩니다.</b></div>
 
   <h3>Abstract Class Views</h3>
   <div class="table-wrap"><table>
@@ -607,17 +607,32 @@ PRD_1004    Product       SmartPhone X1</div>
     <div><div class="layer-title">Semantic Views</div><div class="layer-desc">Cortex Analyst용 시맨틱 모델 &mdash; Facts, Dimensions, Metrics, Relationships 정의</div></div>
   </div>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-value">2</div><div class="stat-label">Semantic Views</div></div>
+    <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Semantic Views</div></div>
     <div class="stat-card"><div class="stat-value">10</div><div class="stat-label">Tables (Base)</div></div>
+    <div class="stat-card"><div class="stat-value">6</div><div class="stat-label">Tables (Ontology)</div></div>
     <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">Tables (KG)</div></div>
   </div>
 
   <div class="why-box">
-    <div class="why-title">Layer 4는 왜 필요한가?</div>
+    <div class="why-title">Layer 4는 왜 필요한가? &mdash; 3-Model Strategy</div>
     <p>Layer 1~3은 데이터를 저장하고 구조화하지만, <b>자연어 질문을 SQL로 변환</b>하려면 AI가 "REGION은 지역을 의미하고, total_orders는 COUNT(DISTINCT ORDER_ID)로 계산한다"는 것을 알아야 합니다. Semantic View는 이런 <b>비즈니스 의미(시맨틱)</b>를 Facts, Dimensions, Metrics, Synonyms으로 정의하여 Cortex Analyst가 정확한 SQL을 생성할 수 있게 합니다.</p>
+    <p style="margin-top:10px;">핵심 설계 원칙: <b>하나의 Semantic Model로 모든 질문을 처리할 수 없습니다.</b> 구체적 데이터 조회, 추상적 cross-type 추론, 메타데이터 탐색은 각각 다른 쿼리 패턴이 필요합니다. 따라서 <b>3개의 목적별 Semantic View</b>를 만들고, Agent가 질문 의도에 따라 적절한 Model을 선택합니다.</p>
   </div>
 
-  <h3>SV_SUPPLY_CHAIN_BASE</h3>
+  <div class="section-note">
+    <b>3-Model Strategy</b>: 블로그 시리즈 Part 2에서 정의한 아키텍처 패턴. 같은 온톨로지 메타데이터에서 파생되지만, 각기 다른 질문 유형에 최적화된 세 개의 시맨틱 인터페이스를 제공합니다.
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Model</th><th>Semantic View</th><th>소비하는 Layer</th><th>질문 유형</th><th>예시 질문</th></tr></thead>
+    <tbody>
+      <tr><td><b>Model 1: Concrete</b></td><td>SV_SUPPLY_CHAIN_BASE</td><td>L1 Concrete Views (V_*)</td><td>구체적 데이터 조회</td><td>"지역별 공급업체 수는?"</td></tr>
+      <tr style="background:light-dark(#fefce8,#422006);"><td><b>Model 2: Ontology</b></td><td>SV_SUPPLY_CHAIN_ONTOLOGY</td><td><b>L3 Abstract Views (VW_ONT_*)</b></td><td>추상적 cross-type 추론</td><td>"Organization 유형 엔티티 수는?"</td></tr>
+      <tr><td><b>Model 3: KG/Metadata</b></td><td>SV_SUPPLY_CHAIN_KG</td><td>L2 ONT_* + L1 KG 테이블</td><td>그래프 구조/메타데이터</td><td>"엔티티 타입은 몇 개?"</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Model 1: SV_SUPPLY_CHAIN_BASE</h3>
   <div class="section-note"><b>10개 원본 테이블</b>에 대한 직접 Semantic Model. 구체적인 데이터 조회에 사용: 가격, 주문 수, 재고 수량, 계약 상세 등.</div>
   <div class="table-wrap"><table>
     <thead><tr><th>구성요소</th><th>수</th><th>예시</th></tr></thead>
@@ -630,7 +645,35 @@ PRD_1004    Product       SmartPhone X1</div>
     </tbody>
   </table></div>
 
-  <h3>SV_SUPPLY_CHAIN_KG</h3>
+  <h3>Model 2: SV_SUPPLY_CHAIN_ONTOLOGY (NEW)</h3>
+  <div class="section-note"><b>Abstract Views</b> (VW_ONT_*)에 대한 Semantic Model. 추상 클래스 단위의 cross-type 추론에 사용. <b>이것이 Abstract View(L3)의 핵심 소비자</b>입니다.</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>구성요소</th><th>수</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>Tables</td><td>6</td><td>all_entities (VW_ONT_ALL_ENTITIES), organizations, physical_assets, locations, business_events, hierarchy</td></tr>
+      <tr><td>Facts</td><td>18</td><td>entity_id, entity_type, entity_name, props, org_id, asset_id, loc_id, event_id, ...</td></tr>
+      <tr><td>Dimensions</td><td>5</td><td>dim_entity_type, dim_org_type, dim_asset_type, dim_event_type, dim_parent_class</td></tr>
+      <tr><td>Metrics</td><td>6</td><td>total_entities, distinct_types, org_count, asset_count, loc_count, event_count</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why-box">
+    <div class="why-title">Model 2가 답할 수 있는 질문 유형</div>
+    <p>이 Model은 <b>Abstract View를 소비하는 유일한 Agent 경로</b>입니다. L3 Abstract View가 L4를 통해 Agent와 연결되는 핵심 고리입니다.</p>
+    <div class="compare-grid">
+      <div class="compare-box before">
+        <div class="cb-label">Model 2 없이 (이전)</div>
+        Abstract View가 존재하지만 Agent가 접근 불가.<br/>
+        "모든 조직 엔티티 수는?" → <span style="color:light-dark(#dc2626,#fca5a5);">base_query로 시도 → Supplier만 조회됨</span>
+      </div>
+      <div class="compare-box after">
+        <div class="cb-label">Model 2 추가 후 (현재)</div>
+        Agent가 ontology_query tool로 라우팅.<br/>
+        "모든 조직 엔티티 수는?" → <span style="color:light-dark(#16a34a,#86efac);">VW_ONT_ORGANIZATION 조회 → Organization 하위 전체 집계</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Model 3: SV_SUPPLY_CHAIN_KG</h3>
   <div class="section-note"><b>Knowledge Graph 테이블</b> (KG_NODE, KG_EDGE, ONT_CLASS, ONT_RELATION_DEF)에 대한 Semantic Model. 그래프 구조 질의에 사용.</div>
   <div class="table-wrap"><table>
     <thead><tr><th>구성요소</th><th>수</th><th>예시</th></tr></thead>
@@ -652,12 +695,12 @@ PRD_1004    Product       SmartPhone X1</div>
   </div>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-value">1</div><div class="stat-label">에이전트</div></div>
-    <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">도구</div></div>
+    <div class="stat-card"><div class="stat-value">6</div><div class="stat-label">도구</div></div>
   </div>
 
   <div class="why-box">
     <div class="why-title">Layer 5는 왜 필요한가?</div>
-    <p>Semantic View 2개(Base + KG)와 Graph Traversal UDF 3개가 있으므로, 사용자가 질문할 때 <b>어떤 Tool을 사용해야 하는지</b> 판단해야 합니다. "Samsung SDI가 공급하는 부품은?"은 Base에, "Battery Cell 4680의 전체 BOM 트리"는 Graph UDF에 물어야 합니다.</p>
+    <p>Semantic View 3개(Base + Ontology + KG)와 Graph Traversal UDF 3개가 있으므로, 사용자가 질문할 때 <b>어떤 Tool을 사용해야 하는지</b> 판단해야 합니다. "Samsung SDI가 공급하는 부품은?"은 Base에, "모든 물리적 자산 수는?"은 Ontology에, "Battery Cell 4680의 전체 BOM 트리"는 Graph UDF에 물어야 합니다.</p>
     <p>Cortex Agent는 질문의 의도를 파악하여 <b>자동으로 적절한 Tool을 선택</b>하고 SQL을 생성/실행하여 결과를 반환합니다.</p>
   </div>
 
@@ -666,6 +709,7 @@ PRD_1004    Product       SmartPhone X1</div>
     <thead><tr><th>Tool 이름</th><th>타입</th><th>리소스</th><th>사용 용도</th></tr></thead>
     <tbody>
       <tr><td><b>base_query</b></td><td>cortex_analyst_text_to_sql</td><td>SV_SUPPLY_CHAIN_BASE</td><td>구체적 데이터: 가격, 수량, 재고, 날짜, 특정 엔티티 조회</td></tr>
+      <tr style="background:light-dark(#fefce8,#422006);"><td><b>ontology_query</b></td><td>cortex_analyst_text_to_sql</td><td>SV_SUPPLY_CHAIN_ONTOLOGY</td><td>추상 클래스: Organization, PhysicalAsset 등 cross-type 추론</td></tr>
       <tr><td><b>kg_query</b></td><td>cortex_analyst_text_to_sql</td><td>SV_SUPPLY_CHAIN_KG</td><td>그래프 구조: 노드/엣지 타입 분포, 클래스 계층 메타데이터</td></tr>
       <tr><td style="color:light-dark(#f59e0b,#fde68a);font-weight:700;">expand_descendants</td><td>generic (UDF)</td><td>EXPAND_DESCENDANTS_TOOL</td><td>BOM 트리 하향 확장 (제품 → 부품 → 원자재)</td></tr>
       <tr><td style="color:light-dark(#f59e0b,#fde68a);font-weight:700;">get_ancestors</td><td>generic (UDF)</td><td>GET_ANCESTORS_TOOL</td><td>상향 추적 (원자재 → 어떤 제품에 사용되나?)</td></tr>
@@ -674,7 +718,7 @@ PRD_1004    Product       SmartPhone X1</div>
   </table></div>
 
   <div class="section-note">
-    <b>sql_exec</b> 타입 tool은 Agent가 직접 SQL을 작성하여 실행할 수 있게 합니다. 이를 통해 Agent가 <code>SELECT * FROM TABLE(EXPAND_DESCENDANTS_TOOL('Battery Cell 4680'))</code>와 같은 재귀 UDF를 <b>실시간으로</b> 호출합니다. cortex_analyst_text_to_sql은 Semantic View 기반 자연어→SQL 변환만 가능하지만, sql_exec는 임의의 SQL 실행이 가능합니다.
+    <b>generic</b> 타입 tool은 Agent가 UDF를 직접 호출할 수 있게 합니다. 이를 통해 Agent가 <code>EXPAND_DESCENDANTS_TOOL('Battery Cell 4680')</code>와 같은 재귀 UDF를 <b>실시간으로</b> 호출합니다. cortex_analyst_text_to_sql은 Semantic View 기반 자연어→SQL 변환만 가능하지만, generic tool은 사전 정의된 함수를 직접 실행합니다.
   </div>
 
   <h3>질문 라우팅 흐름</h3>
@@ -685,6 +729,7 @@ PRD_1004    Product       SmartPhone X1</div>
     <div class="rf-arrow">&rarr;</div>
     <div class="rf-branch">
       <div class="rf-box" style="background:#d946ef"><b>base_query</b><br/><small>가격, 주문, 재고</small></div>
+      <div class="rf-box" style="background:#a855f7"><b>ontology_query</b><br/><small>추상 클래스 추론</small></div>
       <div class="rf-box" style="background:#8b5cf6"><b>kg_query</b><br/><small>그래프 메타데이터</small></div>
       <div class="rf-box" style="background:#f59e0b;color:#000"><b>expand_descendants</b><br/><small>BOM 트리 확장</small></div>
       <div class="rf-box" style="background:#f59e0b;color:#000"><b>get_ancestors</b><br/><small>상향 추적</small></div>
@@ -702,6 +747,9 @@ PRD_1004    Product       SmartPhone X1</div>
       <tr><td>"전자제품 평균 가격은?"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
       <tr><td>"미처리 주문과 총 수량을 보여줘"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
       <tr><td>"배터리 관련 부품을 공급하는 업체는?"</td><td><span class="tag tag-concrete">base_query</span></td></tr>
+      <tr style="background:light-dark(#fefce8,#422006);"><td>"Organization 유형 엔티티가 몇 개야?"</td><td><span class="tag" style="background:light-dark(#f3e8ff,#3b0764);color:light-dark(#7c3aed,#c4b5fd);">ontology_query</span></td></tr>
+      <tr style="background:light-dark(#fefce8,#422006);"><td>"모든 물리적 자산(PhysicalAsset)의 타입별 분포는?"</td><td><span class="tag" style="background:light-dark(#f3e8ff,#3b0764);color:light-dark(#7c3aed,#c4b5fd);">ontology_query</span></td></tr>
+      <tr style="background:light-dark(#fefce8,#422006);"><td>"BusinessEvent에 속하는 concrete 타입은?"</td><td><span class="tag" style="background:light-dark(#f3e8ff,#3b0764);color:light-dark(#7c3aed,#c4b5fd);">ontology_query</span></td></tr>
       <tr><td>"Knowledge Graph에 몇 개의 엔티티 타입이 있나?"</td><td><span class="tag tag-abstract">kg_query</span></td></tr>
       <tr><td>"Supplier와 Component를 연결하는 관계는?"</td><td><span class="tag tag-abstract">kg_query</span></td></tr>
       <tr><td>"Battery Cell 4680의 전체 BOM 트리를 보여줘"</td><td><span class="tag tag-true">expand_descendants</span></td></tr>
