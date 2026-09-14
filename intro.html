@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Why Ontology on Snowflake?</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-09-14",
+    "intent": "Partner training — Why Ontology on Snowflake matters",
+    "dataSources": [
+      { "type": "reference", "url": "https://medium.com/snowflake/ontology-on-snowflake-part-1-overview-and-data-model-9e8eeaac7363" },
+      { "type": "reference", "url": "https://medium.com/snowflake/ontology-on-snowflake-part-2-semantic-models-9aa0fa9b9312" },
+      { "type": "reference", "url": "https://medium.com/snowflake/ontology-on-snowflake-part-3-ai-powered-intelligence-bbace87c6be1" }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: light-dark(#ffffff, #0f172a); --bg2: light-dark(#f8fafc, #1e293b); --fg: light-dark(#1e293b, #e2e8f0); --fg2: light-dark(#334155, #cbd5e1); --fg3: light-dark(#64748b, #94a3b8); --border: light-dark(#e2e8f0, #334155); --accent: light-dark(#1e40af, #93c5fd); --heading: light-dark(#0f172a, #f8fafc); }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; max-width: 900px; width: 100%; margin: 0 auto; padding: clamp(16px, 4vw, 32px); color: var(--fg); background: var(--bg); line-height: 1.7; }
+    h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); color: var(--heading); margin-bottom: 0.2em; }
+    h2 { font-size: clamp(1.2rem, 3vw, 1.5rem); color: var(--accent); margin-top: 2.5em; border-bottom: 2px solid light-dark(#dbeafe, #1e3a5f); padding-bottom: 0.3em; }
+    h3 { font-size: 1.1rem; color: light-dark(#1e3a8a, #bfdbfe); margin-top: 1.5em; margin-bottom: 0.5em; }
+    p, li { color: var(--fg2); margin-top: 0.5em; }
+    a { color: light-dark(#2563eb, #60a5fa); }
+    img, svg { max-width: 100%; height: auto; }
+    .subtitle { color: var(--fg3); font-size: 1.05rem; margin-top: 0; }
+    .source { color: var(--fg3); font-size: 0.8rem; font-style: italic; margin-top: 4px; }
+
+    .card { border: 1px solid var(--border); border-radius: 12px; padding: clamp(16px, 3vw, 24px); margin: 1.5em 0; background: var(--bg2); }
+    .highlight { background: light-dark(#eff6ff, #172554); border-left: 4px solid light-dark(#3b82f6, #60a5fa); padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 0.95rem; margin: 16px 0; }
+    .highlight b { color: light-dark(#1e40af, #93c5fd); }
+
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
+    .problem-card { background: light-dark(#fef2f2, #450a0a); border: 1px solid light-dark(#fecaca, #7f1d1d); border-radius: 10px; padding: 16px; }
+    .problem-card .pc-icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .problem-card .pc-title { font-weight: 700; color: light-dark(#991b1b, #fca5a5); font-size: 0.95rem; margin-bottom: 4px; }
+    .problem-card p { font-size: 0.85rem; margin: 0; color: light-dark(#7f1d1d, #fecaca); }
+
+    .solution-card { background: light-dark(#f0fdf4, #052e16); border: 1px solid light-dark(#bbf7d0, #166534); border-radius: 10px; padding: 16px; }
+    .solution-card .pc-icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .solution-card .pc-title { font-weight: 700; color: light-dark(#166534, #86efac); font-size: 0.95rem; margin-bottom: 4px; }
+    .solution-card p { font-size: 0.85rem; margin: 0; color: light-dark(#14532d, #bbf7d0); }
+
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+    .compare-box { border-radius: 10px; padding: 16px 18px; }
+    .compare-box.before { background: light-dark(#fef2f2, #450a0a); border: 1px solid light-dark(#fecaca, #7f1d1d); }
+    .compare-box.after { background: light-dark(#f0fdf4, #052e16); border: 1px solid light-dark(#bbf7d0, #166534); }
+    .compare-box .cb-label { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .compare-box.before .cb-label { color: light-dark(#dc2626, #fca5a5); }
+    .compare-box.after .cb-label { color: light-dark(#16a34a, #86efac); }
+    .compare-box p, .compare-box li { font-size: 0.88rem; }
+    .compare-box ul { padding-left: 18px; margin: 6px 0; }
+    @media (max-width: 560px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .layer-strip { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 24px 0; }
+    .layer-box { width: min(100%, 600px); border-radius: 10px; padding: 12px 20px; color: #fff; text-align: center; }
+    .layer-box .lb-title { font-weight: 700; font-size: 0.95rem; }
+    .layer-box .lb-sub { font-size: 0.82rem; opacity: 0.9; }
+    .layer-arrow { color: var(--fg3); font-size: 1.2rem; line-height: 1; padding: 2px 0; }
+
+    .insight-box { background: light-dark(#fefce8, #422006); border: 1px solid light-dark(#fde68a, #854d0e); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+    .insight-box .ib-title { font-weight: 700; font-size: 0.95rem; color: light-dark(#92400e, #fde68a); margin-bottom: 6px; }
+
+    .scenario-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 12px 0; }
+    .scenario-table th, .scenario-table td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+    .scenario-table th { background: var(--bg2); font-weight: 600; color: var(--fg); }
+    .scenario-table td { color: var(--fg2); }
+
+    .ref-list { list-style: none; padding: 0; margin: 12px 0; }
+    .ref-list li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .ref-list li:last-child { border-bottom: none; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #93c5fd); }
+  </style>
+</head>
+<body>
+
+<h1>Why Ontology on Snowflake?</h1>
+<p class="subtitle">기존 데이터 플랫폼의 한계와 온톨로지 기반 접근의 필요성</p>
+<p class="source">Based on: Ontology on Snowflake Blog Series (Part 1-3) by Tianxia Jia, Snowflake Builders Blog</p>
+
+<!-- ===== SECTION 1: THE PROBLEM ===== -->
+<h2>1. 기존 데이터 플랫폼의 한계</h2>
+
+<div class="highlight">
+  현대 기업은 테이블과 JOIN으로 사고하지 않습니다. <b>사람, 조직, 자산, 이벤트, 프로세스</b>로 사고합니다.<br/>
+  하지만 기존 데이터 플랫폼은 이러한 비즈니스 개념을 직접 모델링할 수 없습니다.
+</div>
+
+<p>비즈니스 사용자가 실제로 묻는 질문:</p>
+<ul>
+  <li>"유럽 사업부에 속한 <b>모든 사람</b>은 누구인가?"</li>
+  <li>"이 사업부들은 어떤 <b>공유 자원을 통해 연결</b>되어 있는가?"</li>
+  <li>"특정 고객 유형에 대해 어떤 <b>역량을 지원</b>하는가?"</li>
+</ul>
+<p>이 질문들은 시스템에게 <b>추상화, 계층 구조, 관계</b>를 넘나드는 추론을 요구합니다.</p>
+
+<h3>왜 기존 방식으로는 어려운가?</h3>
+<div class="problem-grid">
+  <div class="problem-card">
+    <div class="pc-title">의미(Meaning)의 파편화</div>
+    <p>데이터는 웨어하우스에, 시맨틱은 카탈로그나 애플리케이션 코드에, AI는 공유된 개념 모델 없이 동작합니다.</p>
+  </div>
+  <div class="problem-card">
+    <div class="pc-title">취약한 SQL &amp; 중복 로직</div>
+    <p>비즈니스 의미가 스키마, ETL 코드, 애플리케이션에 분산되어 있어 로직이 중복되고 변경에 취약합니다.</p>
+  </div>
+  <div class="problem-card">
+    <div class="pc-title">느린 변경 대응</div>
+    <p>비즈니스가 변경되면 쿼리와 파이프라인을 다시 작성해야 합니다. 스키마 변경 → 전체 시스템 영향.</p>
+  </div>
+  <div class="problem-card">
+    <div class="pc-title">AI의 맥락 부재</div>
+    <p>AI 시스템이 비즈니스 컨텍스트 없이 동작합니다. "조직"이 뭔지, "자산"이 어떤 테이블에 있는지 모릅니다.</p>
+  </div>
+</div>
+
+<div class="insight-box">
+  <div class="ib-title">핵심 문제</div>
+  <p>AI 기반 추론, 분석, 자동화를 지원하려면 플랫폼이 <b>단순히 사실(Fact)을 저장하는 것을 넘어서, 비즈니스가 어떻게 작동하는지를 모델링</b>해야 합니다.</p>
+</div>
+
+<!-- ===== SECTION 2: WHAT IS ONTOLOGY ===== -->
+<h2>2. 온톨로지란 무엇인가?</h2>
+
+<p>온톨로지는 도메인의 <b>형식적 표현(Formal Representation)</b>으로, 다음을 정의합니다:</p>
+
+<div class="problem-grid">
+  <div class="solution-card">
+    <div class="pc-title">객체 (Objects)</div>
+    <p>추상적 개념과 구체적 인스턴스 모두 포함. 예: "물리적 자산" (추상) → "부품", "제품" (구체)</p>
+  </div>
+  <div class="solution-card">
+    <div class="pc-title">관계 (Relationships)</div>
+    <p>객체 간 연결 방식. 예: Supplier <i>supplies</i> Component, Product <i>assembles_from</i> Component</p>
+  </div>
+  <div class="solution-card">
+    <div class="pc-title">계층 구조 (Hierarchies)</div>
+    <p>상속과 분류 체계. 예: Component <i>is-a</i> PhysicalAsset <i>is-a</i> Entity</p>
+  </div>
+  <div class="solution-card">
+    <div class="pc-title">속성 &amp; 제약 (Properties &amp; Constraints)</div>
+    <p>속성, 행동, 규칙. 예: assembles_from은 <i>transitive</i> — A→B→C이면 A→C도 성립</p>
+  </div>
+</div>
+
+<div class="highlight">
+  기존 스키마와의 핵심 차이: 온톨로지는 <b>사실(Facts)과 의미(Meaning)를 분리</b>합니다.<br/>
+  사실은 구체적이고 안정적입니다. 의미는 선언적으로 정의되며 독립적으로 진화합니다.
+</div>
+
+<!-- ===== SECTION 3: CORE INSIGHT ===== -->
+<h2>3. 핵심 아키텍처 원칙</h2>
+
+<div class="insight-box">
+  <div class="ib-title">Ontology on Snowflake의 설계 원칙</div>
+  <p><b>사실(Facts)은 한 번만 저장하고, 의미(Meaning)는 메타데이터로 정의하며, 추상화(Abstraction)는 동적으로 생성합니다.</b></p>
+  <p style="margin-top:8px;">이 분리를 통해 물리적 데이터 모델은 안정적으로 유지되면서, 비즈니스 시맨틱은 독립적으로 진화할 수 있습니다 — 스키마 변경, 중복 로직, 취약한 쿼리 패턴을 제거합니다.</p>
+</div>
+
+<div class="compare-grid">
+  <div class="compare-box before">
+    <div class="cb-label">기존 방식</div>
+    <ul>
+      <li>비즈니스 의미가 스키마, ETL, 앱 코드에 <b>분산</b></li>
+      <li>비즈니스 변경 → 쿼리/파이프라인 <b>재작성</b></li>
+      <li>새 엔티티 추가 → 테이블 DDL, 뷰, JOIN 모두 <b>수정</b></li>
+      <li>AI는 비즈니스 맥락 <b>없이</b> 동작</li>
+    </ul>
+  </div>
+  <div class="compare-box after">
+    <div class="cb-label">Ontology on Snowflake</div>
+    <ul>
+      <li>비즈니스 의미가 메타데이터 테이블에 <b>집중</b></li>
+      <li>비즈니스 변경 → 메타데이터 <b>INSERT</b>만</li>
+      <li>새 엔티티 추가 → SP 호출로 뷰 <b>자동 재생성</b></li>
+      <li>AI가 온톨로지를 통해 비즈니스 맥락을 <b>이해</b></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: 5-LAYER ARCHITECTURE ===== -->
+<h2>4. 5-Layer Architecture</h2>
+
+<p>Ontology on Snowflake는 세 가지 <b>데이터 레이어</b>와 두 가지 <b>인텔리전스 레이어</b>로 구성됩니다.</p>
+
+<div class="layer-strip">
+  <div class="layer-box" style="background:#ec4899"><div class="lb-title">Layer 5: Cortex Agent</div><div class="lb-sub">자연어 질문 → 의도 파악 → 적절한 Semantic Model로 라우팅</div></div>
+  <div class="layer-arrow">&darr;</div>
+  <div class="layer-box" style="background:#d946ef"><div class="lb-title">Layer 4: Semantic Views (3-Model Strategy)</div><div class="lb-sub">Concrete Model + Ontology Model + KG/Metadata Model</div></div>
+  <div class="layer-arrow">&darr;</div>
+  <div class="layer-box" style="background:#a855f7"><div class="lb-title">Layer 3: Abstract Views</div><div class="lb-sub">메타데이터에서 자동 생성되는 추상 개념 뷰 (VW_ONT_*)</div></div>
+  <div class="layer-arrow">&darr;</div>
+  <div class="layer-box" style="background:#8b5cf6"><div class="lb-title">Layer 2: Ontology Metadata</div><div class="lb-sub">클래스, 관계, 계층 구조, 추론 규칙 — 의미를 선언적으로 정의</div></div>
+  <div class="layer-arrow">&darr;</div>
+  <div class="layer-box" style="background:#6366f1"><div class="lb-title">Layer 1: Physical Storage</div><div class="lb-sub">KG_NODE + KG_EDGE — 사실(Facts)만 저장하는 범용 그래프 구조</div></div>
+</div>
+
+<h3>각 레이어의 역할</h3>
+<div class="card">
+  <div style="overflow-x:auto;">
+  <table class="scenario-table">
+    <thead><tr><th>Layer</th><th>역할</th><th>핵심 원칙</th><th>변경 시 영향</th></tr></thead>
+    <tbody>
+      <tr><td><b>L1</b></td><td>사실(Facts) 저장</td><td>모든 엔티티 = 객체, 모든 연결 = 관계</td><td>데이터 추가/변경만 — 구조 불변</td></tr>
+      <tr><td><b>L2</b></td><td>의미(Meaning) 정의</td><td>비즈니스 의미를 메타데이터 테이블로 선언</td><td>INSERT로 확장 — 코드 변경 없음</td></tr>
+      <tr><td><b>L3</b></td><td>추상화(Abstraction) 생성</td><td>메타데이터에서 자동 컴파일된 뷰</td><td>SP 호출로 자동 재생성</td></tr>
+      <tr><td><b>L4</b></td><td>쿼리 인터페이스</td><td>목적별 3개 Semantic Model</td><td>Agent가 의도에 따라 자동 선택</td></tr>
+      <tr><td><b>L5</b></td><td>자연어 인터페이스</td><td>질문 의도 → Tool 라우팅</td><td>새 Tool 추가 시 Agent 확장</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 5: 3-MODEL STRATEGY ===== -->
+<h2>5. 왜 3개의 Semantic Model인가?</h2>
+
+<div class="highlight">
+  <b>하나의 Semantic Model로 모든 질문 유형을 처리할 수 없습니다.</b><br/>
+  구체적 분석, 추상적 추론, 구조 탐색은 각각 다른 트레이드오프를 요구합니다.
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto;">
+  <table class="scenario-table">
+    <thead><tr><th>Model</th><th>대상 질문</th><th>소비 레이어</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Model 1: Concrete</b><br/><span class="tag">KG / 원본 테이블</span></td>
+        <td>구체적 데이터 조회<br/>(가격, 수량, 날짜, 필터)</td>
+        <td>L1 Concrete Views</td>
+        <td>"지역별 공급업체 수는?"<br/>"전자제품 평균 가격은?"</td>
+      </tr>
+      <tr style="background:light-dark(#fefce8,#422006);">
+        <td><b>Model 2: Ontology</b><br/><span class="tag">Abstract Views</span></td>
+        <td>추상적 cross-type 추론<br/>(계층 통합, 다형적 질의)</td>
+        <td>L3 Abstract Views</td>
+        <td>"모든 자산 수는?"<br/>"비즈니스 활동 유형별 건수는?"</td>
+      </tr>
+      <tr>
+        <td><b>Model 3: Metadata</b><br/><span class="tag">ONT_* 테이블</span></td>
+        <td>구조/거버넌스 탐색<br/>(클래스, 관계, 규칙 조회)</td>
+        <td>L2 Metadata</td>
+        <td>"어떤 클래스가 존재해?"<br/>"transitive 관계는?"</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<p>각 Model은 서로 다른 질문 유형에 최적화되어 있으며, 일관성은 <b>모든 Model이 동일한 온톨로지 메타데이터에서 파생</b>되기 때문에 보장됩니다.</p>
+
+<!-- ===== SECTION 6: KEY VALUE ===== -->
+<h2>6. 온톨로지의 핵심 가치</h2>
+
+<h3>가치 1: Zero-Code 확장성</h3>
+<div class="compare-grid">
+  <div class="compare-box before">
+    <div class="cb-label">기존: 새 엔티티 추가</div>
+    <p>CREATE TABLE → INSERT 쿼리 작성 → VIEW 생성 → 기존 UNION 뷰 수정 → Semantic Model 수정 → <b>최소 5개 SQL 수작업</b></p>
+  </div>
+  <div class="compare-box after">
+    <div class="cb-label">온톨로지: 새 엔티티 추가</div>
+    <p>ONT_CLASS에 INSERT 1줄 → ONT_CLASS_MAP에 INSERT 1줄 → SP_GENERATE_ONTOLOGY_VIEWS() 호출 → <b>뷰 자동 재생성, 기존 쿼리 변경 없음</b></p>
+  </div>
+</div>
+
+<h3>가치 2: 안정적인 쿼리</h3>
+<div class="compare-grid">
+  <div class="compare-box before">
+    <div class="cb-label">기존: "모든 사람" 조회</div>
+    <p><code>SELECT * FROM PLAYERS UNION ALL SELECT * FROM COACHES</code><br/>새 역할(Referee) 추가 시 → <b>쿼리 수정 필요</b></p>
+  </div>
+  <div class="compare-box after">
+    <div class="cb-label">온톨로지: "모든 사람" 조회</div>
+    <p><code>SELECT * FROM VW_ONT_PERSON</code><br/>Referee 추가 시 → <b>쿼리 변경 없이 자동 포함</b></p>
+  </div>
+</div>
+
+<h3>가치 3: AI에 비즈니스 맥락 제공</h3>
+<div class="compare-grid">
+  <div class="compare-box before">
+    <div class="cb-label">기존 AI: Text-to-SQL</div>
+    <p>"모든 자산 수"를 물으면 AI가 어떤 테이블을 JOIN해야 하는지 <b>추측</b>해야 합니다. Component와 Product가 "자산"이라는 맥락이 없습니다.</p>
+  </div>
+  <div class="compare-box after">
+    <div class="cb-label">온톨로지 + AI</div>
+    <p>온톨로지가 "PhysicalAsset = Component + Product"를 알려줍니다. AI는 VW_ONT_PHYSICAL_ASSET을 <b>정확하게 선택</b>하여 답변합니다.</p>
+  </div>
+</div>
+
+<h3>가치 4: Multi-Tool 연쇄 추론</h3>
+<div class="insight-box">
+  <div class="ib-title">단일 SQL로는 불가능한 질문</div>
+  <p>"<b>Lithium Carbonate가 사용되는 최종 제품은 뭐고, 그 제품들의 총 주문 건수는?</b>"</p>
+  <p style="margin-top:8px;">이 질문은 (1) Graph Traversal로 원자재 → 최종 제품 추적 후, (2) Concrete Model로 해당 제품의 주문 건수를 집계해야 합니다. Agent가 두 개의 Tool을 연쇄 호출하여 답변합니다.</p>
+</div>
+
+<!-- ===== SECTION 7: WHEN TO USE ===== -->
+<h2>7. 어떤 경우에 적합한가?</h2>
+
+<div class="card">
+  <div style="overflow-x:auto;">
+  <table class="scenario-table">
+    <thead><tr><th>적합한 경우</th><th>부적합한 경우</th></tr></thead>
+    <tbody>
+      <tr><td>엔티티 간 <b>복잡한 관계</b>가 핵심인 도메인</td><td>단순 집계/리포팅만 필요한 경우</td></tr>
+      <tr><td><b>계층 구조</b> (BOM, 조직도, 카테고리 트리)가 있는 도메인</td><td>플랫한 트랜잭션 테이블만 있는 경우</td></tr>
+      <tr><td>비즈니스 모델이 <b>자주 변경</b>되는 환경</td><td>스키마가 고정되어 변경이 거의 없는 환경</td></tr>
+      <tr><td><b>Cross-type 질문</b>이 빈번한 경우 ("모든 자산", "전체 활동")</td><td>항상 특정 테이블만 조회하는 경우</td></tr>
+      <tr><td>AI/Agent 기반 <b>자연어 인터페이스</b>를 구축하려는 경우</td><td>SQL 대시보드만으로 충분한 경우</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>적합 도메인 예시</h3>
+  <div class="problem-grid">
+    <div class="solution-card">
+      <div class="pc-title">Supply Chain</div>
+      <p>공급업체 → 부품 → 제품 → 주문 → 배송의 복잡한 관계망</p>
+    </div>
+    <div class="solution-card">
+      <div class="pc-title">Healthcare</div>
+      <p>환자 → 진단 → 치료 → 약물 → 의료진 간 관계</p>
+    </div>
+    <div class="solution-card">
+      <div class="pc-title">Financial Services</div>
+      <p>고객 → 계좌 → 거래 → 상품 → 규제 간 관계</p>
+    </div>
+    <div class="solution-card">
+      <div class="pc-title">Telecom / IT</div>
+      <p>네트워크 장비 → 서비스 → 고객 → 장애의 의존 관계</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 8: DEMO LINK ===== -->
+<h2>8. 데모 &amp; 참고 자료</h2>
+
+<div class="card">
+  <h3>Retail Supply Chain 데모</h3>
+  <p>10개 원본 테이블 → 5-Layer Ontology Stack → 6개 Tool Agent 구축 완료</p>
+  <p><b>아키텍처 가이드:</b> <a href="https://blakesohn.github.io/retail-ontology/">https://blakesohn.github.io/retail-ontology/</a></p>
+
+  <h3 style="margin-top:20px;">블로그 시리즈 (Architecture Foundation)</h3>
+  <ul class="ref-list">
+    <li><b>Part 1</b> — Overview and Data Model: 사실과 의미의 분리, KG_NODE/KG_EDGE, 메타데이터 레이어<br/><a href="https://medium.com/snowflake/ontology-on-snowflake-part-1-overview-and-data-model-9e8eeaac7363">medium.com/snowflake/.../part-1</a></li>
+    <li><b>Part 2</b> — Semantic Models: 3-Model Strategy, Concrete/Ontology/Metadata 분리<br/><a href="https://medium.com/snowflake/ontology-on-snowflake-part-2-semantic-models-9aa0fa9b9312">medium.com/snowflake/.../part-2</a></li>
+    <li><b>Part 3</b> — AI-Powered Intelligence: Cortex Agent, Graph Tools, Intent Routing<br/><a href="https://medium.com/snowflake/ontology-on-snowflake-part-3-ai-powered-intelligence-bbace87c6be1">medium.com/snowflake/.../part-3</a></li>
+    <li><b>Skill Guide</b> — Ontology Stack Builder: 7-Phase Workflow로 자동 구축<br/><a href="https://medium.com/snowflake/ontology-on-snowflake-from-architecture-to-deployment-with-a-cortex-code-skill-197866ce9c9f">medium.com/snowflake/.../skill</a></li>
+  </ul>
+</div>
+
+<div class="highlight" style="margin-top:24px;">
+  <b>블로그 시리즈의 핵심 메시지:</b> "AI 시스템은 그 위에서 추론하는 시맨틱 기반(Semantic Foundation)만큼만 효과적입니다. 실세계의 모델 없이, AI는 맹목적으로 작동합니다."<br/>
+  <span style="color:var(--fg3);font-size:0.85rem;">— Part 1: "AI systems are only as effective as the semantic foundations they reason over. Without a model of the real world, AI operates blindly."</span>
+</div>
+
+</body>
+</html>
