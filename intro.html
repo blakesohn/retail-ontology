@@ -91,7 +91,29 @@
 
 <h3>구체적 시나리오: Supply Chain 담당자의 질문</h3>
 
-<p>Supply Chain 담당자가 실제로 묻는 질문과, 이를 기존 방식으로 답변하려 할 때의 문제를 살펴봅니다.</p>
+<p>아래 10개의 원본 테이블이 Snowflake에 있다고 가정합니다.</p>
+
+<div class="card" style="padding:14px 20px;">
+  <div style="overflow-x:auto;">
+  <table class="scenario-table" style="margin:0;">
+    <thead><tr><th>테이블</th><th>설명</th><th>행 수</th><th>주요 컬럼</th></tr></thead>
+    <tbody>
+      <tr><td><b>SUPPLIERS</b></td><td>부품 공급업체</td><td>50</td><td>SUPPLIER_ID, NAME, REGION, TIER, IS_ECO_CERTIFIED</td></tr>
+      <tr><td><b>COMPONENTS</b></td><td>원자재/서브어셈블리</td><td>80</td><td>COMPONENT_ID, NAME, CATEGORY, UNIT_COST</td></tr>
+      <tr><td><b>PRODUCTS</b></td><td>완제품</td><td>40</td><td>PRODUCT_ID, NAME, CATEGORY, PRICE</td></tr>
+      <tr><td><b>BOM</b></td><td>Bill of Materials (조립 관계)</td><td>249</td><td>PARENT_ID, CHILD_COMPONENT_ID, QUANTITY</td></tr>
+      <tr><td><b>SUPPLY_CONTRACTS</b></td><td>공급 계약</td><td>118</td><td>SUPPLIER_ID, COMPONENT_ID, AGREED_UNIT_PRICE</td></tr>
+      <tr><td><b>SUBSTITUTIONS</b></td><td>대체 부품 관계</td><td>31</td><td>COMPONENT_ID, SUBSTITUTE_COMPONENT_ID, COMPATIBILITY_SCORE</td></tr>
+      <tr><td><b>WAREHOUSES</b></td><td>물류센터/창고</td><td>20</td><td>WAREHOUSE_ID, NAME, REGION, CAPACITY_UNITS</td></tr>
+      <tr><td><b>INVENTORY</b></td><td>창고별 재고</td><td>745</td><td>WAREHOUSE_ID, ITEM_ID, ITEM_TYPE, QUANTITY</td></tr>
+      <tr><td><b>ORDERS</b></td><td>고객 주문</td><td>15,535</td><td>ORDER_ID, PRODUCT_ID, CUSTOMER_NAME, QUANTITY</td></tr>
+      <tr><td><b>SHIPMENTS</b></td><td>배송</td><td>9,320</td><td>ORDER_ID, WAREHOUSE_ID, CARRIER, STATUS</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<p>이 테이블들에 Semantic View를 설정하면 "지역별 공급업체 수", "전자제품 평균 가격" 같은 <b>단일 테이블 또는 단순 JOIN 질문</b>은 잘 처리됩니다. 하지만 아래와 같은 질문은 어떨까요?</p>
 
 <div class="card">
   <div style="overflow-x:auto;">
@@ -113,6 +135,14 @@
       <tr>
         <td><b>"이번 달 모든 비즈니스 활동(주문+배송+계약) 건수는?"</b></td>
         <td>ORDERS, SHIPMENTS, SUPPLY_CONTRACTS는 전혀 다른 테이블입니다. "비즈니스 활동"이라는 <b>추상 카테고리로 묶는 개념</b>이 DB에 없습니다.</td>
+      </tr>
+      <tr style="background:light-dark(#fefce8,#422006);">
+        <td><b>"Lithium Carbonate가 사용되는 최종 제품은 뭐고, 그 제품들의 총 주문 건수는?"</b></td>
+        <td>이 질문 하나에 <b>두 가지 서로 다른 유형의 탐색</b>이 필요합니다:<br/>
+          (1) Lithium Carbonate → 서브어셈블리 → 최종 제품까지 <b>BOM 트리 재귀 상향 탐색</b> (깊이 불확정)<br/>
+          (2) 찾아낸 제품들의 <b>주문 건수 집계</b> (일반 SQL 집계)<br/><br/>
+          Semantic View만 있다면? Semantic View는 테이블 간 FK JOIN 경로를 정의하지만, <b>재귀 탐색(recursive CTE)은 Cortex Analyst가 생성하지 못합니다.</b> BOM 테이블의 PARENT_ID → CHILD_COMPONENT_ID 관계를 끝까지 따라가는 SQL은 개발자가 직접 작성해야 합니다. 설령 1단계 JOIN은 가능하더라도, "몇 단계를 거쳐야 최종 제품에 도달하는지" 자체를 모르기 때문에 정확한 답변이 나올 수 없습니다.<br/><br/>
+          <b>Ontology에서는?</b> Agent가 <code>get_ancestors</code> UDF로 재귀 상향 탐색하여 최종 제품을 식별한 뒤, <code>base_query</code>로 주문 건수를 집계합니다. <b>두 개의 Tool을 연쇄 호출</b>하여 하나의 답변을 만듭니다.</td>
       </tr>
     </tbody>
   </table>
@@ -142,27 +172,27 @@
       </tr>
       <tr style="background:light-dark(#fef2f2,#450a0a);">
         <td>클래스 계층 구조<br/><span style="font-size:0.8rem;color:var(--fg3);">"Component와 Product는 모두 PhysicalAsset이다"</span></td>
-        <td style="color:light-dark(#dc2626,#fca5a5);font-weight:700;">불가능</td>
+        <td style="color:light-dark(#b45309,#fde68a);font-weight:700;">직접 지원하지 않음</td>
         <td style="color:light-dark(#16a34a,#86efac);font-weight:700;">가능</td>
       </tr>
       <tr style="background:light-dark(#fef2f2,#450a0a);">
         <td>재귀 관계 탐색<br/><span style="font-size:0.8rem;color:var(--fg3);">"BOM 트리를 끝까지 탐색: A→B→C→...→N"</span></td>
-        <td style="color:light-dark(#dc2626,#fca5a5);font-weight:700;">불가능</td>
+        <td style="color:light-dark(#b45309,#fde68a);font-weight:700;">별도 SQL 개발 필요</td>
         <td style="color:light-dark(#16a34a,#86efac);font-weight:700;">가능 (Graph UDF)</td>
       </tr>
       <tr style="background:light-dark(#fef2f2,#450a0a);">
         <td>관계의 속성 정의<br/><span style="font-size:0.8rem;color:var(--fg3);">"assembles_from은 transitive, substitutes_for는 symmetric"</span></td>
-        <td style="color:light-dark(#dc2626,#fca5a5);font-weight:700;">불가능</td>
+        <td style="color:light-dark(#b45309,#fde68a);font-weight:700;">지원 범위 밖</td>
         <td style="color:light-dark(#16a34a,#86efac);font-weight:700;">가능 (Metadata)</td>
       </tr>
       <tr style="background:light-dark(#fef2f2,#450a0a);">
         <td>추론/도출<br/><span style="font-size:0.8rem;color:var(--fg3);">"A가 B를 공급하면, B는 A로부터 공급받는다 (역방향 자동 생성)"</span></td>
-        <td style="color:light-dark(#dc2626,#fca5a5);font-weight:700;">불가능</td>
+        <td style="color:light-dark(#b45309,#fde68a);font-weight:700;">지원 범위 밖</td>
         <td style="color:light-dark(#16a34a,#86efac);font-weight:700;">가능 (Inference)</td>
       </tr>
       <tr style="background:light-dark(#fef2f2,#450a0a);">
         <td>Zero-code 확장<br/><span style="font-size:0.8rem;color:var(--fg3);">"새 엔티티 추가 시 기존 쿼리 변경 없이 자동 포함"</span></td>
-        <td style="color:light-dark(#dc2626,#fca5a5);font-weight:700;">불가능 (ALTER 필요)</td>
+        <td style="color:light-dark(#b45309,#fde68a);font-weight:700;">수동 ALTER 필요</td>
         <td style="color:light-dark(#16a34a,#86efac);font-weight:700;">가능 (SP 호출)</td>
       </tr>
     </tbody>
@@ -304,10 +334,16 @@
       <span style="background:#6366f1;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L1</span>
       <span style="font-weight:700;color:var(--heading);">Physical Storage — 데이터 입력</span>
     </div>
-    <p style="font-size:0.88rem;margin:0;">물류 업체 데이터를 KG_NODE에 INSERT합니다. <b>테이블 구조 변경은 없습니다.</b></p>
-    <div style="background:light-dark(#1e293b,#020617);color:#e2e8f0;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-top:8px;overflow-x:auto;white-space:pre;"><span style="color:#f472b6;">INSERT INTO</span> KG_NODE <span style="color:#f472b6;">VALUES</span>
+    <p style="font-size:0.88rem;margin:0;">물류 업체 데이터를 KG_NODE에, 다른 엔티티와의 관계를 KG_EDGE에 INSERT합니다. <b>테이블 구조 변경은 없습니다.</b></p>
+    <div style="background:light-dark(#1e293b,#020617);color:#e2e8f0;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-top:8px;overflow-x:auto;white-space:pre;"><span style="color:#94a3b8;">-- 엔티티 등록</span>
+<span style="color:#f472b6;">INSERT INTO</span> KG_NODE <span style="color:#f472b6;">VALUES</span>
   (<span style="color:#86efac;">'LP_1'</span>, <span style="color:#86efac;">'LogisticsProvider'</span>, <span style="color:#86efac;">'Maersk'</span>,
-   <span style="color:#c084fc;">OBJECT_CONSTRUCT</span>(<span style="color:#86efac;">'FLEET_SIZE'</span>, <span style="color:#fbbf24;">350</span>, <span style="color:#86efac;">'REGION'</span>, <span style="color:#86efac;">'Global'</span>));</div>
+   <span style="color:#c084fc;">OBJECT_CONSTRUCT</span>(<span style="color:#86efac;">'FLEET_SIZE'</span>, <span style="color:#fbbf24;">350</span>, <span style="color:#86efac;">'REGION'</span>, <span style="color:#86efac;">'Global'</span>));
+
+<span style="color:#94a3b8;">-- 관계 등록: "Maersk가 Seoul DC에서 배송을 담당한다"</span>
+<span style="color:#f472b6;">INSERT INTO</span> KG_EDGE <span style="color:#f472b6;">VALUES</span>
+  (<span style="color:#c084fc;">UUID_STRING</span>(), <span style="color:#86efac;">'LP_1'</span>, <span style="color:#86efac;">'WH_1'</span>, <span style="color:#86efac;">'operates_from'</span>, <span style="color:#fbbf24;">1.0</span>,
+   <span style="color:#c084fc;">OBJECT_CONSTRUCT</span>(<span style="color:#86efac;">'contract_type'</span>, <span style="color:#86efac;">'exclusive'</span>));</div>
   </div>
 
   <!-- L2 -->
@@ -431,12 +467,12 @@
 <h3>가치 2: 안정적인 쿼리</h3>
 <div class="compare-grid">
   <div class="compare-box before">
-    <div class="cb-label">기존: "모든 사람" 조회</div>
-    <p><code>SELECT * FROM PLAYERS UNION ALL SELECT * FROM COACHES</code><br/>새 역할(Referee) 추가 시 → <b>쿼리 수정 필요</b></p>
+    <div class="cb-label">기존: "모든 자산" 조회</div>
+    <p><code>SELECT * FROM COMPONENTS UNION ALL SELECT * FROM PRODUCTS</code><br/>새 자산 유형(Equipment) 추가 시 → <b>쿼리 수정 필요</b></p>
   </div>
   <div class="compare-box after">
-    <div class="cb-label">온톨로지: "모든 사람" 조회</div>
-    <p><code>SELECT * FROM VW_ONT_PERSON</code><br/>Referee 추가 시 → <b>쿼리 변경 없이 자동 포함</b></p>
+    <div class="cb-label">온톨로지: "모든 자산" 조회</div>
+    <p><code>SELECT * FROM VW_ONT_PHYSICAL_ASSET</code><br/>Equipment 추가 시 → <b>쿼리 변경 없이 자동 포함</b></p>
   </div>
 </div>
 
