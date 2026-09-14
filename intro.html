@@ -214,6 +214,88 @@
   </div>
 </div>
 
+<h3>시나리오: "물류 업체(LogisticsProvider)" 를 새로 추가하면?</h3>
+<p>Supply Chain에 새로운 엔티티 유형인 <b>물류 업체</b>가 추가되는 상황을 각 레이어별로 추적합니다.</p>
+
+<div class="card" style="padding:0;overflow:hidden;">
+
+  <!-- L1 -->
+  <div style="border-left:4px solid #6366f1;padding:16px 20px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="background:#6366f1;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L1</span>
+      <span style="font-weight:700;color:var(--heading);">Physical Storage — 데이터 입력</span>
+    </div>
+    <p style="font-size:0.88rem;margin:0;">물류 업체 데이터를 KG_NODE에 INSERT합니다. <b>테이블 구조 변경은 없습니다.</b></p>
+    <div style="background:light-dark(#1e293b,#020617);color:#e2e8f0;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-top:8px;overflow-x:auto;white-space:pre;"><span style="color:#f472b6;">INSERT INTO</span> KG_NODE <span style="color:#f472b6;">VALUES</span>
+  (<span style="color:#86efac;">'LP_1'</span>, <span style="color:#86efac;">'LogisticsProvider'</span>, <span style="color:#86efac;">'Maersk'</span>,
+   <span style="color:#c084fc;">OBJECT_CONSTRUCT</span>(<span style="color:#86efac;">'FLEET_SIZE'</span>, <span style="color:#fbbf24;">350</span>, <span style="color:#86efac;">'REGION'</span>, <span style="color:#86efac;">'Global'</span>));</div>
+  </div>
+
+  <!-- L2 -->
+  <div style="border-left:4px solid #8b5cf6;padding:16px 20px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="background:#8b5cf6;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L2</span>
+      <span style="font-weight:700;color:var(--heading);">Ontology Metadata — 의미 등록</span>
+    </div>
+    <p style="font-size:0.88rem;margin:0;">"LogisticsProvider는 Organization의 하위 클래스다"라는 <b>의미</b>를 메타데이터에 등록합니다.</p>
+    <div style="background:light-dark(#1e293b,#020617);color:#e2e8f0;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-top:8px;overflow-x:auto;white-space:pre;"><span style="color:#94a3b8;">-- 클래스 등록: "물류 업체는 조직의 하위 유형"</span>
+<span style="color:#f472b6;">INSERT INTO</span> ONT_CLASS <span style="color:#f472b6;">VALUES</span>
+  (<span style="color:#86efac;">'LogisticsProvider'</span>, <span style="color:#86efac;">'Organization'</span>, <span style="color:#fbbf24;">FALSE</span>, <span style="color:#86efac;">'물류 업체'</span>);
+
+<span style="color:#94a3b8;">-- 소스 매핑 등록: "KG_NODE에서 NODE_TYPE='LogisticsProvider'인 행"</span>
+<span style="color:#f472b6;">INSERT INTO</span> ONT_CLASS_MAP <span style="color:#f472b6;">VALUES</span>
+  (<span style="color:#86efac;">'LogisticsProvider'</span>, <span style="color:#86efac;">'KG_NODE'</span>, <span style="color:#86efac;">'NODE_TYPE'</span>, <span style="color:#86efac;">'LogisticsProvider'</span>);</div>
+  </div>
+
+  <!-- L3 -->
+  <div style="border-left:4px solid #a855f7;padding:16px 20px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="background:#a855f7;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L3</span>
+      <span style="font-weight:700;color:var(--heading);">Abstract Views — 자동 재생성</span>
+    </div>
+    <p style="font-size:0.88rem;margin:0;">SP를 한 번 호출하면, L2 메타데이터를 읽어 뷰가 <b>자동으로</b> 재생성됩니다.</p>
+    <div style="background:light-dark(#1e293b,#020617);color:#e2e8f0;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-top:8px;overflow-x:auto;white-space:pre;"><span style="color:#f472b6;">CALL</span> SP_GENERATE_ONTOLOGY_VIEWS();
+
+<span style="color:#94a3b8;">-- 결과:</span>
+<span style="color:#86efac;">-- ✓ VW_ONT_LOGISTICSPROVIDER 뷰 새로 생성됨</span>
+<span style="color:#86efac;">-- ✓ VW_ONT_ORGANIZATION 뷰 갱신됨 (Supplier + LogisticsProvider)</span>
+<span style="color:#86efac;">-- ✓ VW_ONT_ALL_ENTITIES 뷰 갱신됨</span></div>
+    <div class="insight-box" style="margin-top:10px;margin-bottom:0;">
+      <p style="font-size:0.85rem;margin:0;"><b>핵심:</b> 이제 <code>SELECT * FROM VW_ONT_ORGANIZATION</code>을 실행하면 기존 Supplier와 <b>새로 추가된 LogisticsProvider가 자동으로 함께</b> 조회됩니다. 기존 쿼리는 한 줄도 수정하지 않았습니다.</p>
+    </div>
+  </div>
+
+  <!-- L4 -->
+  <div style="border-left:4px solid #d946ef;padding:16px 20px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="background:#d946ef;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L4</span>
+      <span style="font-weight:700;color:var(--heading);">Semantic Views — 자동 반영</span>
+    </div>
+    <p style="font-size:0.88rem;margin:0;">Ontology Semantic View (Model 2)는 VW_ONT_ORGANIZATION 뷰를 소스로 사용하므로, L3의 뷰가 갱신되면 <b>Semantic View도 자동으로 새 데이터를 포함</b>합니다.</p>
+    <div style="background:light-dark(#f0fdf4,#052e16);border:1px solid light-dark(#bbf7d0,#166534);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:0.85rem;">
+      <b>변경 작업: 없음.</b> Semantic View는 뷰를 참조하므로, 뷰가 바뀌면 자동 반영됩니다.<br/>
+      다만 새 엔티티의 고유 속성(FLEET_SIZE 등)에 대한 Dimension/Metric을 추가하려면 ALTER SEMANTIC VIEW가 필요합니다.
+    </div>
+  </div>
+
+  <!-- L5 -->
+  <div style="border-left:4px solid #ec4899;padding:16px 20px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="background:#ec4899;color:#fff;padding:2px 10px;border-radius:6px;font-weight:700;font-size:0.85rem;">L5</span>
+      <span style="font-weight:700;color:var(--heading);">Cortex Agent — 즉시 답변 가능</span>
+    </div>
+    <p style="font-size:0.88rem;margin:0;">사용자가 "우리 조직은 총 몇 곳이야?"라고 물으면, Agent는 ontology_query → VW_ONT_ORGANIZATION을 통해 <b>Supplier + LogisticsProvider를 합산</b>하여 답변합니다.</p>
+    <div style="background:light-dark(#f0fdf4,#052e16);border:1px solid light-dark(#bbf7d0,#166534);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:0.85rem;">
+      <b>변경 작업: 없음.</b> Agent 재배포 불필요. 기존 질문이 자동으로 새 데이터를 포함합니다.
+    </div>
+  </div>
+
+</div>
+
+<div class="highlight">
+  <b>요약:</b> 새 엔티티 유형 추가에 필요한 작업은 <b>L1에 데이터 INSERT + L2에 메타데이터 INSERT 2줄 + SP 호출 1번</b>뿐입니다. L3~L5는 자동으로 반영됩니다. DDL 변경, 뷰 수작업, Agent 재배포 없이 시스템이 확장됩니다.
+</div>
+
 <!-- ===== SECTION 5: 3-MODEL STRATEGY ===== -->
 <h2>5. 왜 3개의 Semantic Model인가?</h2>
 
